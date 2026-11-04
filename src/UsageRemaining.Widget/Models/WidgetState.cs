@@ -3,6 +3,7 @@ namespace UsageRemaining.Widget.Models;
 public sealed class WidgetState
 {
     public bool AlwaysOnTop { get; set; } = true;
+    public bool StartWithWindows { get; set; } = true;
     public double Opacity { get; set; } = 1;
     public double? Left { get; set; }
     public double? Top { get; set; }

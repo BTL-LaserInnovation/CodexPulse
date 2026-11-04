@@ -26,6 +26,7 @@ internal static partial class Program
             var previewIndex = Array.IndexOf(args, "--compact-preview");
             if (previewIndex >= 0)
                 return CompactPreview(previewIndex + 1 < args.Length ? args[previewIndex + 1] : "weekly");
+            if (args.Contains("--startup-preview") || args.Contains("--startup-ui")) return StartupUiChecks();
             if (args.Contains("--update-ui")) return UpdateUiChecks();
             if (args.Contains("--ui") || args.Contains("--ui-fixture")) return UiChecks(args.Contains("--ui-fixture"));
             var installedIndex = Array.IndexOf(args, "--published-installed");
@@ -33,6 +34,7 @@ internal static partial class Program
                 publishedPath: installedIndex + 1 < args.Length ? args[installedIndex + 1] : null);
             if (args.Contains("--published")) return RunAsyncChecks(live: false, published: true);
             CoreChecks();
+            StartupChecks.Run(Check);
             ReleaseFeatureChecks.Run(Check);
             return RunAsyncChecks(args.Contains("--live"), calendarLive: args.Contains("--calendar-live"));
         }

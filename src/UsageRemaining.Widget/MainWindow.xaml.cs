@@ -55,14 +55,21 @@ public partial class MainWindow : Window
     {
     }
 
-    public MainWindow(IAppUpdateService updateService)
+    public MainWindow(IAppUpdateService updateService) : this(updateService, new StartupRegistrationService())
     {
+    }
+
+    public MainWindow(IAppUpdateService updateService, IStartupRegistrationService startupService)
+    {
+        ArgumentNullException.ThrowIfNull(startupService);
+        startupRegistration = startupService;
         updates = new(updateService);
         state = store.Load();
         InitializeComponent();
         ApplyCollapsedState();
         Topmost = state.AlwaysOnTop;
         TopmostCheck.IsChecked = Topmost;
+        InitializeStartupControl();
         BackgroundOpacity.SetValue(this, state.Opacity);
         state.Opacity = BackgroundOpacity.GetValue(this);
         OpacitySlider.Value = state.Opacity;
@@ -98,6 +105,7 @@ public partial class MainWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        ApplyStartupPreference();
         InitializeTray();
         clock.Start();
         ClampToWorkArea();

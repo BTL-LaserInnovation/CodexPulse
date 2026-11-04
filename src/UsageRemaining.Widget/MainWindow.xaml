@@ -95,18 +95,20 @@
             PreviewMouseLeftButtonDown="Surface_MouseLeftButtonDown">
         <Grid Margin="14,8">
             <Grid.RowDefinitions><RowDefinition Height="26" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-            <Grid>
+            <Grid x:Name="HeaderGrid" Margin="-8,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" Background="Transparent" ToolTip="빈 곳을 끌어 이동" VerticalAlignment="Center">
+                <StackPanel x:Name="HeaderIdentity" Orientation="Horizontal" Background="Transparent" ToolTip="빈 곳을 끌어 이동" VerticalAlignment="Center">
                     <Image x:Name="AppLogo" Source="{StaticResource AppMark}" Width="16" Height="16" Margin="0,0,6,0"
                            VerticalAlignment="Center" Stretch="Uniform" IsHitTestVisible="False" Focusable="False" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="Codex Pulse" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="AppTitle" Text="Codex Pulse" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <Button x:Name="UpdateButton" Content="Update" Width="44" Height="20" Margin="6,0,0,0"
                             VerticalAlignment="Center" Visibility="Collapsed" Click="Update_Click"
                             Style="{StaticResource UpdateButtonStyle}" services:BackgroundOpacity.Value="1" Opacity="1"
                             ToolTip="Update Codex Pulse" AutomationProperties.Name="Update Codex Pulse" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel x:Name="HeaderControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="AutoStartCheck" Content="자동" IsChecked="True" VerticalAlignment="Center" Margin="0,0,6,0"
+                              Checked="AutoStart_Changed" Unchecked="AutoStart_Changed" ToolTip="Windows 로그인 시 자동 실행" AutomationProperties.Name="Windows 로그인 시 자동 실행" />
                     <CheckBox x:Name="TopmostCheck" Content="고정" VerticalAlignment="Center" Margin="0,0,6,0"
                               Checked="Topmost_Changed" Unchecked="Topmost_Changed" ToolTip="항상 위에 표시" AutomationProperties.Name="항상 위에 표시" />
                     <Slider x:Name="OpacitySlider" Width="36" Minimum="0.55" Maximum="1" Value="1" SmallChange="0.05" LargeChange="0.1"
@@ -114,7 +116,7 @@
                     <Button x:Name="CollapseButton" Width="24" Height="24" Padding="0" Click="ToggleCollapse_Click" ToolTip="접기" AutomationProperties.Name="위젯 접기">
                         <Path x:Name="CollapseIcon" Data="M 0,5 L 4,1 8,5" Stroke="{StaticResource MutedBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                     </Button>
-                    <Button Width="24" Height="24" Padding="0" Click="Close_Click" ToolTip="닫기" AutomationProperties.Name="닫기">
+                    <Button x:Name="CloseButton" Width="24" Height="24" Padding="0" Click="Close_Click" ToolTip="닫기" AutomationProperties.Name="닫기">
                         <Path Data="M 0,0 L 8,8 M 8,0 L 0,8" Stroke="{StaticResource CoralBrush}" StrokeThickness="1.3" />
                     </Button>
                 </StackPanel>

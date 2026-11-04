@@ -40,6 +40,8 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe
       - name: Run update UI safety checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --update-ui
+      - name: Run startup preference and header checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --startup-ui
       - name: Install packaging tool
         run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
       - name: Package installer and update feed
