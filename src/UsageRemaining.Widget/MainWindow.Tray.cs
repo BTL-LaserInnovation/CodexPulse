@@ -32,9 +32,16 @@ public partial class MainWindow
     }
 
     private void ActivateFromTray()
+        => ActivateExistingInstance();
+
+    internal bool IsClosing => closing;
+
+    internal void ActivateExistingInstance()
     {
         if (closing) return;
-        Window target = resetDialog is { IsVisible: true } dialog ? dialog : this;
+        Window target = resetDialog is { } dialog && (dialog.IsVisible || dialog.IsLoaded) ? dialog : this;
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         if (!target.IsVisible) target.Show();
         if (target.WindowState == WindowState.Minimized) target.WindowState = WindowState.Normal;
         target.Activate();

@@ -109,6 +109,7 @@ public partial class MainWindow : Window
         InitializeTray();
         clock.Start();
         ClampToWorkArea();
+        (Application.Current as App)?.MainWindowLoaded(this);
         _ = updates.CheckIfDueAsync(lifetime.Token);
         _ = RefreshPublicCalendarAsync();
         await RefreshAsync();

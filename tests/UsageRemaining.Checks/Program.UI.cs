@@ -36,6 +36,7 @@ internal static partial class Program
             });
         }
         var app = new App();
+        if (fixture) app.Startup += (_, _) => CheckQueuedStartupActivation(app);
         app.InitializeComponent();
         app.StartupUri = new Uri("/CodexPulse;component/MainWindow.xaml", UriKind.Relative);
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -48,6 +49,7 @@ internal static partial class Program
             try
             {
                 await WaitUntilAsync(() => ((TextBlock)window.FindName("StatusText")).Text == "Codex 연결됨", "widget connects", 20_000);
+                if (fixture) Check(!AppActivationPending(app), "queued duplicate activation drains after the main window loads");
                 if (!fixture)
                     await WaitUntilAsync(() => ((TextBlock)window.FindName("PublicStatusText")).Text.Contains("건"), "public reset history visible in live calendar", 20_000);
                 Check(((System.Windows.Controls.Primitives.UniformGrid)window.FindName("DaysPanel")).Children.Count == 42, "42-cell month calendar");

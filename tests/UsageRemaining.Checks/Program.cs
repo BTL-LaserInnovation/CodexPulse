@@ -20,6 +20,10 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         if (args.Contains("app-server")) return FakeServer();
+        if (args.Contains("--single-instance-helper")) return SingleInstanceHelper(args);
+        if (args.Contains("--single-instance")) return SingleInstanceChecks();
+        var singlePublished = Array.IndexOf(args, "--single-instance-published");
+        if (singlePublished >= 0) return SingleInstancePublishedChecks(args[singlePublished + 1]);
         Velopack.VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         try
         {

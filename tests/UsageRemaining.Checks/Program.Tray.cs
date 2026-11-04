@@ -27,6 +27,7 @@ internal static partial class Program
         VerifyNativeTrayBeforeClose(handle);
         Check(!window.ShowInTaskbar, "visible widget has no taskbar button");
         await VerifyTrayRestoreAsync(window, 0x0202, legacy: true);
+        await VerifyExistingInstanceRestoreAsync(window);
 
         // Remove just this test window's icon, then simulate Explorer's restart notice.
         var data = new TrayNotifyIconData { Size = Marshal.SizeOf<TrayNotifyIconData>(), Window = handle, Id = TrayIconId };
@@ -69,7 +70,40 @@ internal static partial class Program
         Check(!IsWindowEnabled(ownerHandle) && !owner.IsActive &&
             Application.Current.Windows.OfType<ResetConfirmDialog>().Count() == 1,
             "tray activation preserves the modal confirmation and disabled owner");
+        dialog.WindowState = WindowState.Minimized;
+        ActivateExistingInstance(owner);
+        await WaitUntilAsync(() => dialog.WindowState == WindowState.Normal && dialog.IsActive,
+            "duplicate launch activation restores the existing modal confirmation");
+        Check(!IsWindowEnabled(ownerHandle) && !owner.IsActive &&
+            Application.Current.Windows.OfType<ResetConfirmDialog>().Count() == 1,
+            "duplicate launch activation preserves a single modal confirmation and disabled owner");
     }
+
+    private static async Task VerifyExistingInstanceRestoreAsync(MainWindow window)
+    {
+        var topmost = window.Topmost;
+        var opacity = BackgroundOpacity.GetValue(window);
+        var height = window.Height;
+        var left = window.Left;
+        var top = window.Top;
+        var expanded = ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility;
+        window.WindowState = WindowState.Minimized;
+        ActivateExistingInstance(window);
+        await WaitUntilAsync(() => window.WindowState == WindowState.Normal && window.IsActive,
+            "duplicate launch activation restores minimized existing window");
+        window.Hide();
+        ActivateExistingInstance(window);
+        await WaitUntilAsync(() => window.IsVisible && window.IsActive,
+            "duplicate launch activation restores hidden existing window");
+        Check(window.Topmost == topmost && BackgroundOpacity.GetValue(window) == opacity && window.Opacity == 1 &&
+            window.Height == height && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == expanded &&
+            Math.Abs(window.Left - left) < 1 && Math.Abs(window.Top - top) < 1 && !window.ShowInTaskbar,
+            "duplicate launch activation preserves pin opacity collapse and position preferences");
+    }
+
+    private static void ActivateExistingInstance(MainWindow window) =>
+        (typeof(MainWindow).GetMethod("ActivateExistingInstance", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Missing existing-instance activation seam")).Invoke(window, null);
 
     private static void SendTrayActivation(IntPtr window, uint notification, bool legacy = false) =>
         SendMessage(window, (uint)TrayIconService.CallbackMessage,
@@ -88,6 +122,9 @@ internal static partial class Program
         await closed.Task.WaitAsync(TimeSpan.FromSeconds(8));
         Check(!window.IsVisible && !IsWindow(handle), "X closes the widget native window instead of hiding it");
         VerifyNativeTrayAfterClose(handle);
+        if (Application.Current is App app)
+            Check(!await RequestExistingAppActivationAsync(app),
+                "closed retained owner rejects duplicate activation instead of acknowledging a lost request");
     }
 
     private static bool TrayRegistered(IntPtr window)
