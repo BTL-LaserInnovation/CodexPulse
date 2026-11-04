@@ -1,0 +1,91 @@
+name: Build, verify and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codexpulse-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content src/UsageRemaining.Widget/UsageRemaining.Widget.csproj
+          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected a stable three-part version.' }
+          "value=$version" >> $env:GITHUB_OUTPUT
+      - name: Build Debug
+        run: dotnet build UsageRemaining.sln -c Debug -p:Platform=x64 -m:1
+      - name: Build Release
+        run: dotnet build UsageRemaining.sln -c Release -p:Platform=x64 -m:1 --no-restore
+      - name: Run deterministic checks
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe
+      - name: Run update UI safety checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --update-ui
+      - name: Install packaging tool
+        run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
+      - name: Download previous stable package for delta generation
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VPK_TOKEN: ${{ github.token }}
+        run: |
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --json tagName,isDraft,isPrerelease --limit 100 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list releases.' }
+          $stable = @($releases | Where-Object { -not $_.isDraft -and -not $_.isPrerelease })
+          if ($stable.Count -gt 0 -and @($stable | Where-Object tagName -eq 'v${{ steps.version.outputs.value }}').Count -eq 0) {
+            $previous = gh release view $stable[0].tagName --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the previous release.' }
+            if (@($previous.assets | Where-Object name -eq 'releases.win.json').Count -eq 0) {
+              Write-Output 'Previous release has no compatible update feed; creating the first installer package.'
+              exit 0
+            }
+            & ./artifacts/tools/vpk.exe download github --repoUrl "https://github.com/$env:GITHUB_REPOSITORY" --outputDir "publish/${{ steps.version.outputs.value }}/releases" --channel win --skip-updates
+            if ($LASTEXITCODE -ne 0) { throw 'Could not download the previous package.' }
+          }
+      - name: Package installer and update feed
+        shell: pwsh
+        run: ./scripts/Build-Release.ps1
+      - name: Save build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodexPulse-${{ steps.version.outputs.value }}-win-x64
+          path: publish/${{ steps.version.outputs.value }}/releases/*
+          if-no-files-found: error
+      - name: Publish a new version to GitHub Releases
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VPK_TOKEN: ${{ github.token }}
+        run: |
+          $version = '${{ steps.version.outputs.value }}'
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --json tagName --limit 1000 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list releases.' }
+          if (@($releases | Where-Object tagName -eq "v$version").Count -gt 0) {
+            Write-Output "v$version already exists; no release files are overwritten."
+            exit 0
+          }
+          & ./artifacts/tools/vpk.exe upload github --repoUrl "https://github.com/$env:GITHUB_REPOSITORY" --outputDir "publish/$version/releases" --channel win --publish --releaseName "Codex Pulse $version" --tag "v$version" --targetCommitish $env:GITHUB_SHA --skip-updates
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
+          gh release upload "v$version" "publish/$version/releases/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw 'Checksum upload failed.' }

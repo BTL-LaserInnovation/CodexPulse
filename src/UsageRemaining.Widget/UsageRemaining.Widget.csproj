@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\CodexPulse.ico</ApplicationIcon>
+    <AssemblyName>CodexPulse</AssemblyName>
+    <RootNamespace>UsageRemaining.Widget</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Version>1.2.0</Version>
+    <StartupObject>UsageRemaining.Widget.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.161" />
+    <Resource Include="Assets\CodexPulse.ico" />
+    <Resource Include="Assets\CodexPulse.source.png" />
+  </ItemGroup>
+</Project>
