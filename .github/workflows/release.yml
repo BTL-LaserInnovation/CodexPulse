@@ -42,26 +42,6 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --update-ui
       - name: Install packaging tool
         run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
-      - name: Download previous stable package for delta generation
-        if: github.event_name != 'pull_request'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VPK_TOKEN: ${{ github.token }}
-        run: |
-          $releases = gh release list --repo $env:GITHUB_REPOSITORY --json tagName,isDraft,isPrerelease --limit 100 | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Could not list releases.' }
-          $stable = @($releases | Where-Object { -not $_.isDraft -and -not $_.isPrerelease })
-          if ($stable.Count -gt 0 -and @($stable | Where-Object tagName -eq 'v${{ steps.version.outputs.value }}').Count -eq 0) {
-            $previous = gh release view $stable[0].tagName --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
-            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the previous release.' }
-            if (@($previous.assets | Where-Object name -eq 'releases.win.json').Count -eq 0) {
-              Write-Output 'Previous release has no compatible update feed; creating the first installer package.'
-              exit 0
-            }
-            & ./artifacts/tools/vpk.exe download github --repoUrl "https://github.com/$env:GITHUB_REPOSITORY" --outputDir "publish/${{ steps.version.outputs.value }}/releases" --channel win --skip-updates
-            if ($LASTEXITCODE -ne 0) { throw 'Could not download the previous package.' }
-          }
       - name: Package installer and update feed
         shell: pwsh
         run: ./scripts/Build-Release.ps1
@@ -76,7 +56,6 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          VPK_TOKEN: ${{ github.token }}
         run: |
           $version = '${{ steps.version.outputs.value }}'
           $releases = gh release list --repo $env:GITHUB_REPOSITORY --json tagName --limit 1000 | ConvertFrom-Json
@@ -85,7 +64,47 @@ jobs:
             Write-Output "v$version already exists; no release files are overwritten."
             exit 0
           }
-          & ./artifacts/tools/vpk.exe upload github --repoUrl "https://github.com/$env:GITHUB_REPOSITORY" --outputDir "publish/$version/releases" --channel win --publish --releaseName "Codex Pulse $version" --tag "v$version" --targetCommitish $env:GITHUB_SHA --skip-updates
+          $directory = "publish/$version/releases"
+          $package = "BTL.CodexPulse-$version-full.nupkg"
+          $feed = Get-Content -Raw -Encoding utf8 "$directory/releases.win.json" | ConvertFrom-Json
+          if (@($feed.Assets).Count -ne 1 -or $feed.Assets[0].FileName -ne $package -or $feed.Assets[0].Type -ne 'Full') {
+            throw 'Expected a single full update package in the release feed.'
+          }
+          $hash = (Get-FileHash "$directory/$package" -Algorithm SHA256).Hash
+          if ($hash -ne $feed.Assets[0].SHA256 -or (Get-Item "$directory/$package").Length -ne $feed.Assets[0].Size) {
+            throw 'Update package does not match its release feed.'
+          }
+          $assets = @("$directory/BTL.CodexPulse-win-Setup.exe", "$directory/$package", "$directory/releases.win.json")
+          $arguments = @('release', 'create', "v$version", '--repo', $env:GITHUB_REPOSITORY,
+            '--target', $env:GITHUB_SHA, '--title', "Codex Pulse $version", '--draft')
+          $notes = "release-notes/$version.md"
+          if (Test-Path -LiteralPath $notes) { $arguments += @('--notes-file', $notes) }
+          & gh @arguments @assets
           if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
-          gh release upload "v$version" "publish/$version/releases/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY
-          if ($LASTEXITCODE -ne 0) { throw 'Checksum upload failed.' }
+          gh release edit "v$version" --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }
+      - name: Keep only essential release assets
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = '${{ steps.version.outputs.value }}'
+          $tag = "v$version"
+          $release = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect release assets.' }
+          $required = @('BTL.CodexPulse-win-Setup.exe', "BTL.CodexPulse-$version-full.nupkg", 'releases.win.json')
+          foreach ($name in $required) {
+            if ($name -notin $release.assets.name) { throw "Required release asset is missing: $name" }
+          }
+          foreach ($name in @('BTL.CodexPulse-win-Portable.zip', 'RELEASES', 'SHA256SUMS.txt')) {
+            if ($name -in $release.assets.name) {
+              gh release delete-asset $tag $name --repo $env:GITHUB_REPOSITORY --yes
+              if ($LASTEXITCODE -ne 0) { throw "Could not remove optional release asset: $name" }
+            }
+          }
+          $remaining = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not verify remaining assets.' }
+          if (@($remaining.assets).Count -ne 3 -or @($remaining.assets.name | Where-Object { $_ -notin $required }).Count -ne 0) {
+            throw 'The release must contain exactly three uploaded assets.'
+          }

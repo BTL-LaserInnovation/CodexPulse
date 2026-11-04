@@ -22,7 +22,7 @@ Codex의 남은 사용량, 계정, 리셋권, 공개 리셋 달력을 보여주�
 
 새 버전 배포는 프로젝트의 `<Version>`을 올리고 `release-notes/<버전>.md`를 작성한 다음 `main`에 올립니다. GitHub Actions가 Debug/Release 빌드·결정적 검사·설치 파일 생성을 실행하고, 해당 버전 태그가 없으면 `v<버전>` Release를 게시합니다. 같은 버전은 덮어쓰지 않습니다. 외부 PR은 게시하지 않습니다. 배포 인증에는 Actions 실행 토큰을 사용하며 앱에는 토큰을 넣지 않습니다.
 
-`scripts/Build-Release.ps1`로 로컬 패키징도 가능합니다. 결과는 `publish/<버전>/releases`에 생성되며 Setup, 업데이트 패키지, `releases.win.json`, SHA256 목록을 포함합니다. 설치형은 `Installed.pubxml`로 framework-dependent 배포하고 `net10.0-x64-desktop` 설치 조건을 지정합니다. `Portable.pubxml`은 별도의 런타임 포함 단일 exe 개발 프로필로 유지합니다.
+`scripts/Build-Release.ps1`로 로컬 패키징도 가능합니다. 결과는 `publish/<버전>/releases`에 생성됩니다. 공개 릴리즈에는 **Setup 설치 파일, full 업데이트 패키지, `releases.win.json` 세 개만** 게시합니다. 일반 사용자는 Setup 파일만 받으면 됩니다. GitHub가 자동으로 표시하는 Source code 압축본 두 개는 실행 파일이 아닙니다. 업데이트는 델타 없이 전체 패키지로 진행하며 피드에 포함된 SHA256과 크기로 검증합니다. 패키징 도구가 내부적으로 생성하는 Portable·호환용 파일은 공개 릴리즈에 올리지 않습니다. 설치형은 `Installed.pubxml`로 framework-dependent 배포하고 `net10.0-x64-desktop` 설치 조건을 지정합니다. `Portable.pubxml`은 별도의 런타임 포함 단일 exe 개발 프로필로 유지합니다.
 
 ## 사용
 

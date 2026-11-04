@@ -35,17 +35,13 @@ try {
         '--packDir', $installedDirectory, '--mainExe', 'CodexPulse.exe', '--packTitle', 'Codex Pulse',
         '--packAuthors', 'BTL-LaserInnovation', '--runtime', 'win-x64', '--channel', 'win',
         '--framework', 'net10.0-x64-desktop', '--icon', 'src/UsageRemaining.Widget/Assets/CodexPulse.ico',
-        '--outputDir', $OutputDirectory, '--yes', '--skip-updates')
+        '--outputDir', $OutputDirectory, '--delta', 'None', '--yes', '--skip-updates')
     $notes = Join-Path $projectRoot "release-notes/$Version.md"
     if (Test-Path -LiteralPath $notes) { $packArgs += @('--releaseNotes', $notes) }
     & $vpkPath @packArgs
     if ($LASTEXITCODE -ne 0) { throw 'Release packaging failed.' }
     $setup = Join-Path $OutputDirectory 'BTL.CodexPulse-win-Setup.exe'
     if (-not (Test-Path -LiteralPath $setup)) { throw "Installer is missing: $setup" }
-    Get-ChildItem -LiteralPath $OutputDirectory -File |
-        Where-Object { $_.Extension -in '.exe', '.nupkg', '.json' } |
-        ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name } |
-        Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Encoding utf8
     Write-Output "Release ${Version}: $OutputDirectory"
 }
 finally { Pop-Location }
