@@ -120,7 +120,8 @@ internal static class OpenTheRankChecks
             ("<main class='cx-cal'><span class='cx-stamp' data-id='bad' data-at='2026-11-01' data-type='banked'></span></main>", "date-only event time"),
             ("<main class='cx-cal'><span class='cx-stamp-extra' data-id='bad' data-at='2026-11-01T00:00:00Z' data-type='banked'></span></main>", "class-name prefix collision"),
             (Excerpt.Replace("</main>", "<span class='cx-stamp' data-id='2117035794678546764' data-at='2026-11-01T23:28:20.731Z' data-type='banked'></span></main>"), "conflicting stamp identifier"),
-            (Excerpt.Replace("</blockquote>\n</article>", "</article>"), "truncated quotation markup")
+            (Excerpt.Replace("</blockquote>", string.Empty).ReplaceLineEndings("\n"), "truncated quotation markup with LF line endings"),
+            (Excerpt.Replace("</blockquote>", string.Empty).ReplaceLineEndings("\r\n"), "truncated quotation markup with CRLF line endings")
         })
         {
             var rejected = false;
