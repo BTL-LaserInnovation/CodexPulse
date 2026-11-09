@@ -32,7 +32,9 @@ internal static partial class Program
                 return CompactPreview(previewIndex + 1 < args.Length ? args[previewIndex + 1] : "weekly");
             if (args.Contains("--startup-preview") || args.Contains("--startup-ui")) return StartupUiChecks();
             if (args.Contains("--update-ui")) return UpdateUiChecks();
-            if (args.Contains("--ui") || args.Contains("--ui-fixture")) return UiChecks(args.Contains("--ui-fixture"));
+            if (args.Contains("--google-ui")) return GoogleUiChecks();
+            if (args.Contains("--google-preview") || args.Contains("--google-preview-smoke")) return GooglePreview(args.Contains("--google-preview-smoke"));
+            if (args.Contains("--ui") || args.Contains("--ui-fixture")) return UiChecks(args.Contains("--ui-fixture"), args.Contains("--skip-tray"));
             var installedIndex = Array.IndexOf(args, "--published-installed");
             if (installedIndex >= 0) return RunAsyncChecks(live: false, published: true, installed: true,
                 publishedPath: installedIndex + 1 < args.Length ? args[installedIndex + 1] : null);
@@ -40,14 +42,14 @@ internal static partial class Program
             CoreChecks();
             StartupChecks.Run(Check);
             ReleaseFeatureChecks.Run(Check);
-            return RunAsyncChecks(args.Contains("--live"), calendarLive: args.Contains("--calendar-live"));
+            return RunAsyncChecks(args.Contains("--live"), calendarLive: args.Contains("--calendar-live"), googleOAuth: args.Contains("--google-oauth"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
 
     private static JsonElement Json(string text) { using var doc = JsonDocument.Parse(text); return doc.RootElement.Clone(); }
     private static UsageSnapshot Parse(string text) => UsageParser.Parse(Json(text), Now);
-    private static void Check(bool condition, string name) { if (!condition) throw new InvalidOperationException("FAIL: " + name); passed++; Console.WriteLine("PASS: " + name); }
+    private static void Check(bool condition, string name) { if (!condition) throw new InvalidOperationException("FAIL: " + name); Interlocked.Increment(ref passed); Console.WriteLine("PASS: " + name); }
 
     private static void CoreChecks()
     {
@@ -89,7 +91,7 @@ internal static partial class Program
     }
 
     private static int RunAsyncChecks(bool live, bool published = false, bool calendarLive = false,
-        bool installed = false, string? publishedPath = null)
+        bool installed = false, string? publishedPath = null, bool googleOAuth = false)
     {
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var exitCode = 0;
@@ -100,6 +102,7 @@ internal static partial class Program
                 using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(35));
                 await ReleaseFeatureChecks.RunAsync(Check);
                 await UpdateChecks.RunAsync(Check);
+                await GoogleCalendarChecks.RunAsync(Check, googleOAuth);
                 await using (var fake = new CodexAppServerClient(Environment.ProcessPath!))
                 {
                     var requests = await Task.WhenAll(fake.ReadAccountAsync(cancel.Token), fake.ReadRateLimitsAsync(cancel.Token));

@@ -122,10 +122,10 @@ internal static partial class Program
         {
             slider.Value = factor;
             dialog.UpdateLayout();
-            Check(dialog.Opacity == 1 && window.Opacity == 1 && BackgroundOpacity.GetValue(dialog) == factor,
-                "open confirmation follows background setting live while both windows stay opaque");
-            CheckAlpha(RenderPixels(dialog), 9, dialog.ActualHeight / 2, factor, "confirmation gradient interior");
-            CheckAlpha(RenderPixels(card), 3, card.ActualHeight / 2, factor, "confirmation card fill");
+            Check(dialog.Opacity == 1 && window.Opacity == 1 && BackgroundOpacity.GetValue(dialog) == 1 && BackgroundOpacity.GetValue(window) == factor,
+                "open confirmation keeps an opaque background while the main setting changes live");
+            CheckAlpha(RenderPixels(dialog), 9, dialog.ActualHeight / 2, 1, "confirmation gradient interior");
+            CheckAlpha(RenderPixels(card), 3, card.ActualHeight / 2, 1, "confirmation card fill");
             Check(AlphaPixels(label).SequenceEqual(baseline) && baseline.Max() == 255,
                 "confirmation text alpha is unchanged by the background setting");
             if (factor == .55) Capture(dialog, "confirmation-background-55");

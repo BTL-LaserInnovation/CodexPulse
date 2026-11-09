@@ -13,7 +13,7 @@ namespace UsageRemaining.Checks;
 
 internal static partial class Program
 {
-    private static int UiChecks(bool fixture)
+    private static int UiChecks(bool fixture, bool skipTray = false)
     {
         var folder = Environment.GetEnvironmentVariable("USAGEREMAINING_DATA_DIR") ?? Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "ui", Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("USAGEREMAINING_DATA_DIR", folder);
@@ -48,7 +48,9 @@ internal static partial class Program
             started = true;
             try
             {
-                await WaitUntilAsync(() => ((TextBlock)window.FindName("StatusText")).Text == "Codex 연결됨", "widget connects", 20_000);
+                await WaitUntilAsync(() => WindowField<bool>(window, "connected") && WindowField<UsageSnapshot>(window, "snapshot").Windows.Count > 0,
+                    "widget connects", 20_000);
+                Console.WriteLine("UI initial status: " + ((TextBlock)window.FindName("StatusText")).Text);
                 if (fixture) Check(!AppActivationPending(app), "queued duplicate activation drains after the main window loads");
                 if (!fixture)
                     await WaitUntilAsync(() => ((TextBlock)window.FindName("PublicStatusText")).Text.Contains("건"), "public reset history visible in live calendar", 20_000);
@@ -67,7 +69,7 @@ internal static partial class Program
                 opacity.Value = .75; Check(window.Opacity == 1 && Math.Abs(BackgroundOpacity.GetValue(window) - .75) < .001, "live background-only opacity control");
                 CheckBackgroundOpacity(window);
                 CheckUpdateButton(window);
-                await VerifyTrayAsync(window);
+                if (!skipTray) await VerifyTrayAsync(window);
                 Check(WindowInteraction.CanDragFrom((TextBlock)window.FindName("PrimaryPercent")) &&
                     !WindowInteraction.CanDragFrom((System.Windows.Shapes.Path)window.FindName("CollapseIcon")) &&
                     !WindowInteraction.CanDragFrom(opacity), "usage background drags but interactive control descendants do not");
@@ -96,10 +98,10 @@ internal static partial class Program
                     var use = Descendants<Button>(credits).First();
                     use.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     var dialog = await WaitForDialogAsync();
-                    Check(dialog.Opacity == 1 && window.Opacity == 1 && BackgroundOpacity.GetValue(dialog) == BackgroundOpacity.GetValue(window) && dialog.Owner == window,
-                        "confirmation matches main background opacity and owner");
+                    Check(dialog.Opacity == 1 && window.Opacity == 1 && BackgroundOpacity.GetValue(dialog) == 1 && dialog.Owner == window,
+                        "confirmation has an opaque background and the main window as owner");
                     CheckDialogBackgroundOpacity(window, dialog);
-                    await VerifyTrayModalAsync(window, dialog);
+                    if (!skipTray) await VerifyTrayModalAsync(window, dialog);
                     Check(dialog.Icon is BitmapFrame { Decoder.Frames.Count: 9 } &&
                         ((Image)dialog.FindName("DialogLogo")).Source is BitmapSource { PixelWidth: > 0 }, "confirmation uses the same C icon identity");
                     var cancel = (Button)dialog.FindName("CancelResetButton");
@@ -173,10 +175,10 @@ internal static partial class Program
                 Capture(window, fixture ? "widget-collapsed-fixture" : "widget-collapsed");
                 if (fixture) CheckCompactTransitions(window);
                 pin.IsChecked = false;
-                await VerifyTrayRestoreAsync(window);
+                if (!skipTray) await VerifyTrayRestoreAsync(window);
                 pin.IsChecked = true;
                 collapse.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Check(window.Height == 480 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
+                Check(window.Height == 604 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
                 Check(window.Opacity == 1 && BackgroundOpacity.GetValue(window) == .55, "expand preserves background opacity without fading the window");
                 var status = ((TextBlock)window.FindName("StatusText")).Text;
                 Console.WriteLine($"UI: status={status}; size={window.ActualWidth}x{window.ActualHeight}");
@@ -184,7 +186,15 @@ internal static partial class Program
             catch (Exception ex) { Console.Error.WriteLine(ex); exitCode = 1; }
             finally
             {
-                try { await VerifyTrayCloseAsync(window); }
+                try
+                {
+                    if (!skipTray) await VerifyTrayCloseAsync(window);
+                    else
+                    {
+                        window.Close();
+                        await WaitUntilAsync(() => WindowField<bool>(window, "closeComplete"), "fixture window closes cleanly without native tray checks");
+                    }
+                }
                 catch (Exception ex) { Console.Error.WriteLine(ex); exitCode = 1; window.Close(); }
                 app.Shutdown(exitCode);
             }

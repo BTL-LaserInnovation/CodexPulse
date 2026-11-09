@@ -39,7 +39,8 @@ public partial class MainWindow
     internal void ActivateExistingInstance()
     {
         if (closing) return;
-        Window target = resetDialog is { } dialog && (dialog.IsVisible || dialog.IsLoaded) ? dialog : this;
+        Window target = resetDialog is { } dialog && (dialog.IsVisible || dialog.IsLoaded) ? dialog
+            : googleDialog is { } calendarDialog && (calendarDialog.IsVisible || calendarDialog.IsLoaded) ? calendarDialog : this;
         if (!IsVisible) Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         if (!target.IsVisible) target.Show();

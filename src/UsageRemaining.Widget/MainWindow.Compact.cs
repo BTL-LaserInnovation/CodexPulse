@@ -12,12 +12,11 @@ public partial class MainWindow
 
     private void RenderCompactUsage(bool stale)
     {
-        var windows = snapshot?.Windows.Take(2).OrderBy(window => window.DurationMinutes == 10080 ? 0 : 1).ToArray()
-            ?? [];
-        RenderCompactWindow(windows.ElementAtOrDefault(0), CompactName, CompactPercent, CompactReset, CompactProgress, "MintBrush", stale);
+        var windows = DisplayedQuotaWindows();
+        RenderCompactWindow(windows.ElementAtOrDefault(0), CompactName, CompactPercent, CompactReset, CompactProgress, QuotaAccent(windows.ElementAtOrDefault(0)), stale);
         var secondary = windows.ElementAtOrDefault(1);
         if (secondary is not null)
-            RenderCompactWindow(secondary, CompactSecondaryName, CompactSecondaryPercent, CompactSecondaryReset, CompactSecondaryProgress, "VioletBrush", stale);
+            RenderCompactWindow(secondary, CompactSecondaryName, CompactSecondaryPercent, CompactSecondaryReset, CompactSecondaryProgress, QuotaAccent(secondary), stale);
         else
         {
             CompactSecondaryName.Text = "";
@@ -44,6 +43,12 @@ public partial class MainWindow
             ClampToWorkArea();
         }
     }
+
+    private RateWindow[] DisplayedQuotaWindows() => snapshot?.Windows.Take(2)
+        .OrderBy(window => window.DurationMinutes == 10080 ? 0 : 1).ToArray() ?? [];
+
+    private static string QuotaAccent(RateWindow? window) => window is null ? "MutedBrush"
+        : window.DurationMinutes == 10080 ? "MintBrush" : "VioletBrush";
 
     private void RenderCompactWindow(RateWindow? window, TextBlock name, TextBlock percent, TextBlock reset, ProgressBar progress, string accent, bool stale)
     {

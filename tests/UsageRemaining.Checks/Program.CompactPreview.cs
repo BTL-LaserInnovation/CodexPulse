@@ -87,6 +87,7 @@ internal static partial class Program
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
         var snapshotField = typeof(MainWindow).GetField("snapshot", flags)!;
         var render = typeof(MainWindow).GetMethod("RenderCompactUsage", flags)!;
+        var renderExpanded = typeof(MainWindow).GetMethod("RenderUsage", flags)!;
         var original = snapshotField.GetValue(window);
         var left = window.Left;
         var top = window.Top;
@@ -95,6 +96,7 @@ internal static partial class Program
         void Show(params RateWindow[] rows)
         {
             snapshotField.SetValue(window, new UsageSnapshot(now, rows.ToList()));
+            renderExpanded.Invoke(window, null);
             render.Invoke(window, [false]);
             window.UpdateLayout();
         }
@@ -115,11 +117,27 @@ internal static partial class Program
                 "one-to-two transition orders weekly first even when returned as secondary and preserves row values");
             Check(BrushColor(Text("CompactSecondaryPercent").Foreground) == ResourceColor("CoralBrush") &&
                 BrushColor(Bar("CompactSecondaryProgress").Foreground) == ResourceColor("CoralBrush"), "severe secondary quota colors both percentage and progress coral");
+            Check(BrushColor(Text("CompactPercent").Foreground) == ResourceColor("MintBrush") &&
+                BrushColor(Bar("CompactProgress").Foreground) == ResourceColor("MintBrush"), "weekly quota retains mint percentage and progress identity");
+            Check(Text("PrimaryName").Text.StartsWith("주간") && Text("PrimaryPercent").Text == "63%" &&
+                Text("SecondaryName").Text.StartsWith("5시간") && Text("SecondaryPercent").Text == "8%" &&
+                BrushColor(Text("PrimaryPercent").Foreground) == ResourceColor("MintBrush") &&
+                BrushColor(Text("SecondaryPercent").Foreground) == ResourceColor("CoralBrush"),
+                "expanded and compact quotas share weekly-first ordering and warning colors");
             CheckCompactLayout(window, 2);
+
+            Show(new RateWindow("primary", 100, 10080, now.AddDays(4)), new("secondary", 12, 300, now.AddHours(4)));
+            Check(Text("CompactPercent").Text == "0%" && BrushColor(Text("CompactPercent").Foreground) == ResourceColor("CoralBrush") &&
+                BrushColor(Bar("CompactProgress").Foreground) == ResourceColor("CoralBrush"), "exhausted weekly quota retains coral warning");
 
             Show(new RateWindow("primary", 10, 1440, now.AddHours(18)), new("secondary", 24, null, null));
             Check(Text("CompactName").Text == "일일" && Text("CompactSecondaryName").Text == "사용 한도" &&
                 Text("CompactSecondaryPercent").Text == "76%", "weekly-absent daily and unknown period keep provider order and actual values");
+            Check(BrushColor(Text("CompactPercent").Foreground) == ResourceColor("VioletBrush") &&
+                BrushColor(Text("CompactSecondaryPercent").Foreground) == ResourceColor("VioletBrush") &&
+                BrushColor(Text("PrimaryPercent").Foreground) == ResourceColor("VioletBrush") &&
+                BrushColor(Text("SecondaryPercent").Foreground) == ResourceColor("VioletBrush"),
+                "all nonweekly quota values share violet identity in expanded and compact modes");
             CheckCompactLayout(window, 2);
 
             Show(new RateWindow("primary", 16, 150, null));
@@ -154,6 +172,7 @@ internal static partial class Program
         finally
         {
             snapshotField.SetValue(window, original);
+            renderExpanded.Invoke(window, null);
             render.Invoke(window, [false]);
             window.Left = left;
             window.Top = top;

@@ -13,3 +13,6 @@ widget-state.json*
 *.pem
 .env
 .env.*
+google-oauth-client.json
+client_secret_*.json
+credentials.dpapi

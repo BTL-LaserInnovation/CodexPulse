@@ -60,9 +60,16 @@ public partial class MainWindow : Window
     }
 
     public MainWindow(IAppUpdateService updateService, IStartupRegistrationService startupService)
+        : this(updateService, startupService, new GoogleCalendarService())
+    {
+    }
+
+    public MainWindow(IAppUpdateService updateService, IStartupRegistrationService startupService, IGoogleCalendarService googleService)
     {
         ArgumentNullException.ThrowIfNull(startupService);
+        ArgumentNullException.ThrowIfNull(googleService);
         startupRegistration = startupService;
+        googleCalendar = googleService;
         updates = new(updateService);
         state = store.Load();
         InitializeComponent();
@@ -98,6 +105,8 @@ public partial class MainWindow : Window
         Closed += Window_Closed;
         clock.Tick += Clock_Tick;
         updates.Changed += Updates_Changed;
+        googleCalendar.Changed += GoogleCalendar_Changed;
+        RenderGoogleConnection();
     }
 
     private AccountHistory? History => state.ActiveAccount is { } key && state.Accounts.TryGetValue(key, out var history) ? history : null;
@@ -112,6 +121,7 @@ public partial class MainWindow : Window
         (Application.Current as App)?.MainWindowLoaded(this);
         _ = updates.CheckIfDueAsync(lifetime.Token);
         _ = RefreshPublicCalendarAsync();
+        _ = InitializeGoogleAsync();
         await RefreshAsync();
     }
 
@@ -119,6 +129,8 @@ public partial class MainWindow : Window
     {
         if (closing) return;
         _ = updates.CheckIfDueAsync(lifetime.Token);
+        if (googleInitialized && Environment.TickCount64 >= nextGoogleRefresh && !googleRefreshing)
+            _ = RefreshGoogleAsync();
         RefreshLocalTime();
         RenderUsage();
         if (Environment.TickCount64 >= nextCreditRender)
@@ -158,6 +170,7 @@ public partial class MainWindow : Window
         displayOffset = local.Offset;
         RenderCalendar();
         RenderCredits();
+        _ = RefreshGoogleAsync(force: true);
     }
 
     private void EnsureClient()
@@ -316,8 +329,9 @@ public partial class MainWindow : Window
     {
         if (!ready) return;
         var stale = !connected || snapshot is null || DateTimeOffset.UtcNow - snapshot.CapturedAt > TimeSpan.FromMinutes(2);
-        RenderWindow(snapshot?.Windows.ElementAtOrDefault(0), PrimaryName, PrimaryPercent, PrimaryReset, PrimaryProgress, "MintBrush");
-        RenderWindow(snapshot?.Windows.ElementAtOrDefault(1), SecondaryName, SecondaryPercent, SecondaryReset, SecondaryProgress, "VioletBrush");
+        var windows = DisplayedQuotaWindows();
+        RenderWindow(windows.ElementAtOrDefault(0), PrimaryName, PrimaryPercent, PrimaryReset, PrimaryProgress, QuotaAccent(windows.ElementAtOrDefault(0)));
+        RenderWindow(windows.ElementAtOrDefault(1), SecondaryName, SecondaryPercent, SecondaryReset, SecondaryProgress, QuotaAccent(windows.ElementAtOrDefault(1)));
         RenderCompactUsage(stale);
         UpdatedText.Text = snapshot is null ? $"60초마다 갱신 · {LocalTime.Label(DateTimeOffset.UtcNow)}" :
             $"{(stale ? "이전 값 · " : "")}{LocalTime.Convert(snapshot.CapturedAt):MM/dd HH:mm:ss} 갱신 · {LocalTime.Label(snapshot.CapturedAt)}";
@@ -328,6 +342,7 @@ public partial class MainWindow : Window
     private void RenderWindow(RateWindow? window, TextBlock name, TextBlock percent, TextBlock reset, ProgressBar progress, string accent)
     {
         name.Text = window?.Label ?? "한도 정보 없음";
+        name.Foreground = Theme(accent);
         percent.Text = window is null ? "— %" : $"{window.RemainingPercent:0.#}%";
         progress.Value = window?.RemainingPercent ?? 0;
         var color = window is { RemainingPercent: <= 15 } ? "CoralBrush" : accent;
@@ -347,11 +362,19 @@ public partial class MainWindow : Window
 
     private void CalendarDay_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: DateTime date }) { selectedDate = date; month = new(date.Year, date.Month, 1); RenderCalendar(); }
+        if (sender is Button { Tag: DateTime date })
+        {
+            var previousMonth = month;
+            selectedDate = date;
+            selectedGoogleEvent = null;
+            month = new(date.Year, date.Month, 1);
+            RenderCalendar();
+            if (previousMonth != month) _ = RefreshGoogleAsync(force: true);
+        }
     }
-    private void PreviousMonth_Click(object sender, RoutedEventArgs e) { if (month.Year > 2) { month = month.AddMonths(-1); RenderCalendar(); } }
-    private void NextMonth_Click(object sender, RoutedEventArgs e) { if (month.Year < 9998) { month = month.AddMonths(1); RenderCalendar(); } }
-    private void Today_Click(object sender, RoutedEventArgs e) { selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date; month = new(selectedDate.Year, selectedDate.Month, 1); RenderCalendar(); }
+    private void PreviousMonth_Click(object sender, RoutedEventArgs e) { if (month.Year > 2) { month = month.AddMonths(-1); RenderCalendar(); _ = RefreshGoogleAsync(force: true); } }
+    private void NextMonth_Click(object sender, RoutedEventArgs e) { if (month.Year < 9998) { month = month.AddMonths(1); RenderCalendar(); _ = RefreshGoogleAsync(force: true); } }
+    private void Today_Click(object sender, RoutedEventArgs e) { selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date; month = new(selectedDate.Year, selectedDate.Month, 1); selectedGoogleEvent = null; RenderCalendar(); _ = RefreshGoogleAsync(force: true); }
     private void Topmost_Changed(object sender, RoutedEventArgs e) { if (ready) { Topmost = TopmostCheck.IsChecked == true; state.AlwaysOnTop = Topmost; SaveSettings(); } }
     private void Opacity_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -365,6 +388,7 @@ public partial class MainWindow : Window
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
         _ = RefreshPublicCalendarAsync();
+        _ = RefreshGoogleAsync(force: true);
         await RefreshAsync();
     }
 
@@ -424,7 +448,7 @@ public partial class MainWindow : Window
         if (closeComplete) return;
         e.Cancel = true;
         if (closing) return;
-        if (updateApplying && (creditAction || resetDialog is not null || refreshing || !SaveSettings(reportWarning: false)))
+        if (updateApplying && (creditAction || resetDialog is not null || refreshing || googleDialog is not null || googleDeleting || !SaveSettings(reportWarning: false)))
         {
             RestoreAfterUpdateFailure("업데이트를 적용하지 못했습니다. 진행 중인 작업과 설정 저장 상태를 확인한 후 다시 누르세요.");
             return;
@@ -455,6 +479,9 @@ public partial class MainWindow : Window
         clock.Stop();
         lifetime.Cancel();
         resetDialog?.Close();
+        googleDialog?.Close();
+        googleCalendar.Changed -= GoogleCalendar_Changed;
+        googleCalendar.Dispose();
         publicClient.Dispose();
         if (!updateApplying) SaveSettings();
         updates.Changed -= Updates_Changed;

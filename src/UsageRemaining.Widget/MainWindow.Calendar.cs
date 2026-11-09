@@ -9,6 +9,7 @@ namespace UsageRemaining.Widget;
 
 public partial class MainWindow
 {
+    private const double CalendarDateHeight = 20;
     private sealed record CalendarEntry(string Text, string Color, string? Url, string? Summary = null);
 
     private async Task RefreshPublicCalendarAsync()
@@ -51,7 +52,11 @@ public partial class MainWindow
         {
             var day = first.AddDays(i);
             var events = EventsFor(day);
-            var button = new Button { Style = (Style)FindResource("CalendarDayButton"), Tag = day };
+            var googleEvents = GoogleEventsFor(day);
+            var isPublicHoliday = googleEvents.Any(GoogleHolidayCalendar.IsPublicHoliday);
+            var button = new Button { Style = (Style)FindResource("CalendarDayButton"), Tag = day,
+                Height = CalendarDateHeight, VerticalAlignment = VerticalAlignment.Top,
+                VerticalContentAlignment = VerticalAlignment.Top };
             var content = new Grid { Height = 18 };
             content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(14) });
             content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
@@ -60,7 +65,7 @@ public partial class MainWindow
                 Text = day.Day.ToString(CultureInfo.InvariantCulture), FontSize = 10,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = Theme(day.Month != month.Month ? "MutedBrush" : day.DayOfWeek == DayOfWeek.Sunday ? "CoralBrush" : "TextBrush"),
+                Foreground = Theme(isPublicHoliday || day.DayOfWeek == DayOfWeek.Sunday ? "CoralBrush" : day.Month != month.Month ? "MutedBrush" : "TextBrush"),
                 Opacity = day.Month == month.Month ? 1 : .4
             };
             content.Children.Add(number);
@@ -88,8 +93,9 @@ public partial class MainWindow
             }
             if (day == selectedDate) { button.Background = new SolidColorBrush(Color.FromArgb(32, 255, 255, 255)); button.BorderBrush = Theme("TextBrush"); }
             else if (day == today && events.Count == 0) button.BorderBrush = Theme("MintBrush");
-            button.ToolTip = $"{day:yyyy-MM-dd}\n" + (events.Count == 0 ? "등록된 공개 이력·예정 없음" : string.Join("\n", events.Select(e => e.Text)));
-            System.Windows.Automation.AutomationProperties.SetName(button, $"{day:yyyy년 M월 d일} {(day == selectedDate ? "선택됨 " : "")}{string.Join(" ", events.Select(e => e.Text))}");
+            button.ToolTip = $"{day:yyyy-MM-dd}\n" + (events.Count == 0 ? "등록된 공개 이력·예정 없음" : string.Join("\n", events.Select(e => e.Text)))
+                + (googleEvents.Count == 0 ? "" : "\nGoogle\n" + string.Join("\n", googleEvents.Select(value => CalendarEventPresentation.TimeLabel(value) + " · " + value.Summary)));
+            System.Windows.Automation.AutomationProperties.SetName(button, $"{day:yyyy년 M월 d일} {(day == selectedDate ? "선택됨 " : "")}{(isPublicHoliday ? "공휴일 " : "")}{string.Join(" ", events.Select(e => e.Text))}");
             button.Click += CalendarDay_Click;
             DaysPanel.Children.Add(button);
         }
@@ -99,6 +105,8 @@ public partial class MainWindow
         DetailText.Text = selected.Count == 0 ? "이 날짜에 등록된 공개 이력·예정이 없습니다." : string.Join("\n", selected.Select(e => e.Text));
         DetailText.ToolTip = string.Join("\n", selected.Select(e => e.Text + (string.IsNullOrWhiteSpace(e.Summary) ? "" : "\n" + e.Summary)))
             + "\n출처: OpenTheRank(제삼자 기록). 공개 기록은 개인 계정에 실제 적용된 시각과 다를 수 있습니다. 예고는 발표 게시 시각이며 적용 완료나 확정 일정이 아닙니다.";
+        RenderCalendarEventList(selected);
+        RenderGoogleCalendarOverlay();
     }
 
     private List<CalendarEntry> EventsFor(DateTime day)

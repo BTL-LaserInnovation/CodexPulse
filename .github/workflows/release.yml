@@ -42,13 +42,19 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --update-ui
       - name: Run startup preference and header checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --startup-ui
+      - name: Run Google calendar UI checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-ui
+      - name: Run Google OAuth checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-oauth
       - name: Verify single instance with concurrent processes
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --single-instance
       - name: Install packaging tool
         run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
       - name: Package installer and update feed
         shell: pwsh
-        run: ./scripts/Build-Release.ps1
+        run: |
+          $requireGoogle = '${{ vars.CODEX_PULSE_REQUIRE_GOOGLE_CONFIGURATION }}' -eq 'true'
+          ./scripts/Build-Release.ps1 -RequireGoogleConfiguration:$requireGoogle
       - name: Save build artifacts
         uses: actions/upload-artifact@v4
         with:

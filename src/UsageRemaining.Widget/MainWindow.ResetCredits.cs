@@ -68,17 +68,17 @@ public partial class MainWindow
             };
             System.Windows.Automation.AutomationProperties.SetName(name, "리셋권 이름: " + credit.DisplayName);
             row.Children.Add(name);
-            var deadline = new TextBlock { FontSize = 9, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+            var deadline = new TextBlock { FontSize = ListFontSize, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
             System.Windows.Automation.AutomationProperties.SetName(deadline, "리셋권 만료 시각");
             Grid.SetColumn(deadline, 1);
             row.Children.Add(deadline);
-            var remaining = new TextBlock { FontSize = 9, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+            var remaining = new TextBlock { FontSize = ListFontSize, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
             System.Windows.Automation.AutomationProperties.SetName(remaining, "리셋권 남은 시간");
             Grid.SetColumn(remaining, 2);
             row.Children.Add(remaining);
             var use = new Button
             {
-                Content = "사용", Tag = credit.Id, Height = 20, Width = 32, Padding = new Thickness(3, 0, 3, 0),
+                Content = "사용", Tag = credit.Id, Height = 20, Width = 32, FontSize = ListFontSize, Padding = new Thickness(3, 0, 3, 0),
                 Foreground = Theme("MintBrush"), IsEnabled = connected && !creditAction && !refreshing && !updateApplying && creditBalance.AvailableCount != 0 && credit.IsAvailable(DateTimeOffset.UtcNow)
             };
             use.Click += UseResetCredit_Click;
@@ -141,10 +141,6 @@ public partial class MainWindow
             {
                 Owner = this, Topmost = Topmost, WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
-            System.Windows.Data.BindingOperations.SetBinding(resetDialog, BackgroundOpacity.ValueProperty, new System.Windows.Data.Binding
-            {
-                Source = this, Path = new PropertyPath("(0)", BackgroundOpacity.ValueProperty), Mode = System.Windows.Data.BindingMode.OneWay
-            });
             var confirmed = resetDialog.ShowDialog() == true;
             resetDialog = null;
             if (!confirmed || closing) return;

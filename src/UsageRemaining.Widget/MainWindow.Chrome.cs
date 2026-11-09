@@ -11,7 +11,7 @@ public partial class MainWindow
 {
     private void ApplyCollapsedState()
     {
-        Height = state.IsCollapsed ? desiredCompactHeight : 480;
+        Height = state.IsCollapsed ? desiredCompactHeight : 604;
         ExpandedPanel.Visibility = state.IsCollapsed ? Visibility.Collapsed : Visibility.Visible;
         CompactPanel.Visibility = state.IsCollapsed ? Visibility.Visible : Visibility.Collapsed;
         CollapseIcon.Data = Geometry.Parse(state.IsCollapsed ? "M 0,0 L 5,5 10,0" : "M 0,5 L 5,0 10,5");

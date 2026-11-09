@@ -48,7 +48,7 @@ public partial class MainWindow
         updateRetry = null;
         await updates.DownloadAsync(lifetime.Token);
         if (closing || !updates.IsDownloaded) return;
-        if (creditAction || resetDialog is not null || refreshing)
+        if (creditAction || resetDialog is not null || refreshing || googleDialog is not null || googleDeleting)
         {
             ShowUpdateRetry("다운로드 완료 · 진행 중인 계정/리셋 작업이 끝나면 다시 눌러 재시작하세요.");
             return;

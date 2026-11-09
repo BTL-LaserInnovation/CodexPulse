@@ -16,6 +16,7 @@ public partial class ResetConfirmDialog : Window
     {
         this.credit = credit;
         InitializeComponent();
+        BackgroundOpacity.SetValue(this, 1);
         DialogAccountText.Text = account + " · " + plan;
         DialogAccountText.ToolTip = DialogAccountText.Text;
         DialogCreditText.Text = credit.DisplayName;
