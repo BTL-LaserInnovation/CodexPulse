@@ -86,11 +86,14 @@ internal static partial class Program
                 Check(service.Restarts == 0 && !WindowField<bool>(window, "closing"),
                     "failed settings save prevents update apply and keeps window usable");
                 Directory.Delete(statePath);
+                // Expanding may clamp the window on a small runner desktop; persist its actual position.
+                var expectedLeft = window.Left;
+                var expectedTop = window.Top;
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await WaitUntilAsync(() => service.Restarts == 1 && service.Disposals == 1,
                     "successful explicit update saves settings and prepares graceful restart");
                 var saved = new LocalStateStore(folder).Load();
-                Check(!saved.AlwaysOnTop && saved.Opacity == .7 && saved.Left == 123 && saved.Top == 123
+                Check(!saved.AlwaysOnTop && saved.Opacity == .7 && saved.Left == expectedLeft && saved.Top == expectedTop
                     && saved.IsCollapsed && saved.ActiveAccount == original.ActiveAccount
                     && saved.CodexExecutable == original.CodexExecutable
                     && saved.Accounts["fixture-account"].Email == "fixture@example.invalid"
