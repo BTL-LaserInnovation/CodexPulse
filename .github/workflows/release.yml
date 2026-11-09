@@ -50,11 +50,27 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --single-instance
       - name: Install packaging tool
         run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
-      - name: Package installer and update feed
+      - name: Verify pull request packaging without release registration
+        if: github.event_name == 'pull_request'
         shell: pwsh
+        run: ./scripts/Build-Release.ps1
+      - name: Package installer and update feed
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          GOOGLE_DESKTOP_CLIENT_JSON: ${{ secrets.GOOGLE_DESKTOP_CLIENT_JSON }}
         run: |
-          $requireGoogle = '${{ vars.CODEX_PULSE_REQUIRE_GOOGLE_CONFIGURATION }}' -eq 'true'
-          ./scripts/Build-Release.ps1 -RequireGoogleConfiguration:$requireGoogle
+          if ([string]::IsNullOrWhiteSpace($env:GOOGLE_DESKTOP_CLIENT_JSON)) {
+            throw 'Configure the GOOGLE_DESKTOP_CLIENT_JSON repository secret before publishing.'
+          }
+          $configuration = Join-Path $env:RUNNER_TEMP 'codexpulse-google-desktop-client.json'
+          try {
+            [IO.File]::WriteAllText($configuration, $env:GOOGLE_DESKTOP_CLIENT_JSON, (New-Object Text.UTF8Encoding($false)))
+            ./scripts/Build-Release.ps1 -GoogleConfigurationPath $configuration -RequireGoogleConfiguration
+          }
+          finally {
+            if (Test-Path -LiteralPath $configuration) { Remove-Item -LiteralPath $configuration -Force }
+          }
       - name: Save build artifacts
         uses: actions/upload-artifact@v4
         with:

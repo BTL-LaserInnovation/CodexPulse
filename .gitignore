@@ -16,3 +16,4 @@ widget-state.json*
 google-oauth-client.json
 client_secret_*.json
 credentials.dpapi
+config/google-desktop-client.json

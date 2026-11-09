@@ -18,7 +18,7 @@ Codex 앱 또는 CLI는 별도로 설치하고 ChatGPT 계정으로 로그인해
 
 **현재 Google 앱은 Testing 상태이며, 배포 담당자가 등록한 테스트 사용자만 연결할 수 있습니다. Google의 앱 공개·검증은 완료되지 않았습니다.** 일반 사용자 전체의 Google 로그인이 준비된 상태는 아닙니다. Google을 연결하지 않아도 Codex 사용량과 공개 리셋 달력은 사용할 수 있습니다.
 
-연결이 허용된 계정은 **Google 연결**에서 기본 브라우저로 로그인하고 접근 권한을 승인한 뒤 표시할 캘린더를 선택합니다. PC에 Google 캘린더 앱을 따로 설치할 필요는 없습니다. 연결 설정이 준비되지 않았다는 안내가 표시되면 배포 담당자의 설정 준비가 필요합니다.
+배포용 데스크톱 앱 등록 정보가 설치본에 포함되어 있어 별도 설정 파일을 준비할 필요가 없습니다. 연결이 허용된 계정은 **Google 연결**에서 기본 브라우저로 로그인하고 접근 권한을 승인한 뒤 표시할 캘린더를 선택합니다. PC에 Google 캘린더 앱을 따로 설치할 필요는 없습니다.
 
 - Google에서 변경한 일정은 실행 중 60초마다 가져오며, 새로 고침 버튼으로 즉시 조회할 수 있습니다.
 - **＋**로 일정을 추가하고, 목록에서 일정을 눌러 제목·날짜·시간·종일·반복·알림을 편집합니다. 저장한 변경은 Google 캘린더에 반영됩니다.
@@ -61,6 +61,8 @@ Codex 앱 또는 CLI는 별도로 설치하고 ChatGPT 계정으로 로그인해
 Codex 인증은 Codex 자체가 처리하며 위젯이 Codex 인증 토큰을 직접 읽거나 저장하지 않습니다. Google 연결 정보는 별도로 Windows 사용자 보호 저장소(DPAPI)를 사용해 `%LOCALAPPDATA%\CodexPulse\google-auth\credentials.dpapi`에 저장합니다. 비밀번호는 위젯에 입력하지 않습니다. 공개 리셋 자료는 각 PC에서 가져오며 별도의 개인 이력 동기화 서버는 사용하지 않습니다.
 
 ## 개발과 배포
+
+Google 데스크톱 앱 등록 정보는 소스에 커밋하지 않고 GitHub Actions의 `GOOGLE_DESKTOP_CLIENT_JSON` 저장소 비밀 설정에서 빌드 시 주입합니다. 이 값은 Google이 발급한 데스크톱 등록 JSON 전체 또는 `installed.client_id`와 `installed.client_secret`만 담은 JSON입니다. 로컬에서는 `-GoogleConfigurationPath` 또는 Git에서 제외된 `config/google-desktop-client.json`으로 전달할 수 있습니다. 공개 클라이언트인 데스크톱 앱의 등록 정보는 설치본에서 추출할 수 있으며 사용자 로그인 토큰이나 비밀번호가 아닙니다. 빌드는 두 등록 필드만 설치 폴더에 복사하고 개인 상태·인증 파일은 거부합니다. 사용자 토큰은 각 PC에서 로그인한 뒤 별도로 생성·보호됩니다. 외부 기여의 PR 빌드에는 배포용 등록 정보를 제공하지 않습니다.
 
 Visual Studio에서 `UsageRemaining.sln`을 엽니다. .NET 10 SDK와 WPF 개발 도구가 필요하며, 설치·업데이트에는 Velopack 1.2.161을 사용합니다. 라이선스는 [third-party/Velopack-LICENSE.txt](third-party/Velopack-LICENSE.txt)에 있습니다.
 
