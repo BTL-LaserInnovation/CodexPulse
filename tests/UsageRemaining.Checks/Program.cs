@@ -24,6 +24,10 @@ internal static partial class Program
         if (args.Contains("--single-instance")) return SingleInstanceChecks();
         var singlePublished = Array.IndexOf(args, "--single-instance-published");
         if (singlePublished >= 0) return SingleInstancePublishedChecks(args[singlePublished + 1]);
+        if (args.Contains("--update-transport")) return RunUpdateTransportChecks(network: false);
+        if (args.Contains("--update-network")) return RunUpdateTransportChecks(network: true);
+        if (args.Contains("--update-network-fallback")) return RunUpdateTransportChecks(network: true, forceFallback: true);
+        if (args.Contains("--update-legacy-network")) return RunLegacyUpdateNetworkCheck();
         Velopack.VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         try
         {
@@ -102,6 +106,7 @@ internal static partial class Program
                 using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(35));
                 await ReleaseFeatureChecks.RunAsync(Check);
                 await UpdateChecks.RunAsync(Check);
+                await UpdateTransportChecks.RunAsync(Check);
                 await GoogleCalendarChecks.RunAsync(Check, googleOAuth);
                 await using (var fake = new CodexAppServerClient(Environment.ProcessPath!))
                 {
