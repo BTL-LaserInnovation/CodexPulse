@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Codex Pulse는 Codex 사용량과 리셋 일정, Google 캘린더를 한 화면에서 확인하는 Windows 데스크톱 위젯입니다.">
+  <title>Codex Pulse · 사용량과 일정을 한눈에</title>
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<div class="wrap">
+  <header>
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt="" width="38" height="38">Codex Pulse</a>
+    <nav aria-label="주 메뉴"><a href="index.html" aria-current="page">앱 소개</a><a href="privacy.html">개인정보처리방침</a><a href="terms.html">이용약관</a></nav>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <div class="eyebrow">WINDOWS DESKTOP WIDGET</div>
+        <h1 id="hero-title">사용량과 일정을,<br><span>한눈에.</span></h1>
+        <p class="lead">Codex의 남은 사용량, 리셋 일정과 Google 캘린더를 작은 위젯에 담았습니다. 작업 흐름을 이어가며 필요한 정보를 확인하세요.</p>
+        <div class="actions"><a class="button" href="https://github.com/BTL-LaserInnovation/CodexPulse/releases/latest/download/BTL.CodexPulse-win-Setup.exe">Windows용 다운로드</a><a class="button secondary" href="https://github.com/BTL-LaserInnovation/CodexPulse">GitHub 프로젝트</a></div>
+        <p class="small">설치 파일 하나로 시작합니다. 필요한 .NET Desktop Runtime은 설치 프로그램이 준비합니다.</p>
+      </div>
+      <div class="visual"><img src="assets/logo.png" alt="민트색 사용량 막대와 리셋 화살표로 구성된 Codex Pulse 로고" width="256" height="256"><p>필요한 정보만, 내 작업 공간에.</p><div class="pills"><span class="pill">Codex 사용량</span><span class="pill purple">Google 캘린더</span></div></div>
+    </section>
+    <section class="section" aria-labelledby="features-title">
+      <h2 id="features-title">작게 띄워두고, 편하게 확인하세요.</h2>
+      <div class="cards">
+        <article class="card"><span class="number">01 · USAGE</span><h3>남은 사용량과 계정</h3><p>이 PC의 Codex에 연결된 계정과 남은 한도를 확인합니다. 주간 한도와 다른 기간의 한도를 구분해 표시합니다.</p></article>
+        <article class="card"><span class="number">02 · RESET</span><h3>리셋 달력과 리셋권</h3><p>공개 리셋 기록과 계정의 다음 리셋 시각을 살펴봅니다. 리셋권은 만료 순서로 정리하고 확인 후 사용합니다.</p></article>
+        <article class="card"><span class="number">03 · CALENDAR</span><h3>Google 일정 양방향 연결</h3><p>선택한 캘린더의 일정을 보고 추가·수정·삭제합니다. Google 캘린더에서 바꾼 일정도 새로 가져옵니다.</p></article>
+      </div>
+      <p class="small">접기·펼치기, 상단 고정, 배경 투명도, Windows 자동실행과 트레이를 지원합니다. 시간은 PC의 시간대를 따릅니다.</p>
+    </section>
+    <section class="section" aria-labelledby="google-title">
+      <h2 id="google-title">Google 연결은 선택입니다.</h2>
+      <p class="lead">Google의 로그인 화면에서 직접 계정을 선택하고 권한을 승인합니다. Codex Pulse에 Google 비밀번호를 입력하지 않습니다. 연결하지 않아도 Codex 사용량과 공개 리셋 달력은 사용할 수 있습니다.</p>
+      <div class="notice"><strong>현재 Google 연결은 테스트 운영 중입니다.</strong> 앱에 등록된 테스트 사용자만 연결할 수 있으며 Google의 공개 검증은 아직 완료되지 않았습니다. 설치 파일을 받았다는 이유만으로 모든 Google 계정의 연결이 허용되는 것은 아닙니다.</div>
+      <div class="table-wrap"><table><caption><h3>요청하는 Google 권한과 사용 목적</h3></caption><thead><tr><th scope="col">권한</th><th scope="col">사용 목적</th></tr></thead><tbody><tr><td>openid · email</td><td>연결한 Google 계정의 이메일을 표시하고 계정을 구분합니다.</td></tr><tr><td>캘린더 목록 읽기</td><td>사용자가 연결할 캘린더를 선택하고 이름·시간대·접근 권한을 확인합니다.</td></tr><tr><td>캘린더 일정 보기·편집</td><td>일정을 표시하고 사용자가 요청한 일정 추가·수정·삭제를 Google 캘린더에 반영합니다. 읽기 전용 캘린더에는 쓰지 않습니다.</td></tr></tbody></table></div>
+      <p>데이터의 사용·저장·삭제 방법은 <a href="privacy.html">개인정보처리방침</a>에서 확인하세요.</p>
+    </section>
+    <section class="section" aria-labelledby="help-title"><h2 id="help-title">설치와 도움말</h2><p class="lead">GitHub 계정 없이 설치 파일을 다운로드할 수 있습니다. 기존 설치형에서는 Update 버튼으로 업데이트합니다. 이전 버전에서 Retry가 반복되면 앱을 종료하고 최신 설치 파일을 한 번 실행하세요.</p><p><a href="https://github.com/BTL-LaserInnovation/CodexPulse#readme">사용 설명서</a> · <a href="https://github.com/BTL-LaserInnovation/CodexPulse/issues">문의·문제 신고</a></p><p class="small">BTL-LaserInnovation/CodexPulse 프로젝트가 제공하는 앱입니다. OpenAI 또는 Google의 공식 제품이 아닙니다. 공개 리셋 자료는 OpenTheRank의 제삼자 기록이며 내 계정에 적용됐다는 확인을 의미하지 않습니다.</p></section>
+  </main>
+  <footer><p>Codex Pulse · BTL-LaserInnovation/CodexPulse</p><div class="links"><a href="privacy.html">개인정보처리방침</a><a href="terms.html">이용약관</a><a href="https://github.com/BTL-LaserInnovation/CodexPulse/issues">문의</a></div></footer>
+</div>
+</body>
+</html>

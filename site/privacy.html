@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Codex Pulse가 Google 계정·캘린더 정보와 로컬 설정을 사용하는 목적, 저장 방식 및 삭제 방법을 설명합니다."><title>개인정보처리방침 · Codex Pulse</title><link rel="icon" href="assets/logo.png" type="image/png"><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#main">본문으로 이동</a><div class="wrap">
+<header><a class="brand" href="index.html"><img src="assets/logo.png" alt="" width="38" height="38">Codex Pulse</a><nav aria-label="주 메뉴"><a href="index.html">앱 소개</a><a href="privacy.html" aria-current="page">개인정보처리방침</a><a href="terms.html">이용약관</a></nav></header>
+<main id="main" class="content">
+  <div class="eyebrow">PRIVACY</div><h1>개인정보처리방침</h1><p class="small">시행일·최종 수정일: 2026년 11월 10일</p>
+  <p>이 방침은 GitHub의 <a href="https://github.com/BTL-LaserInnovation/CodexPulse">BTL-LaserInnovation/CodexPulse 프로젝트</a>가 제공하는 Windows 앱 Codex Pulse와 이 소개 사이트에 적용됩니다. 앱은 사용자의 PC에서 작동하며, Google 연결과 일정 처리를 위해 Google API에 직접 요청합니다.</p>
+  <h2>1. 접근하는 정보와 사용 목적</h2>
+  <ul><li><strong>Google 계정 이메일:</strong> 연결한 계정을 표시하고 계정을 구분합니다. Google 로그인은 브라우저의 Google 화면에서 진행하며 앱이 Google 비밀번호를 받지 않습니다.</li><li><strong>캘린더 목록:</strong> 캘린더 식별자·이름·시간대·접근 권한을 읽어 사용자가 표시할 캘린더를 선택할 수 있게 합니다.</li><li><strong>선택한 캘린더의 일정:</strong> 제목·설명·장소·시작/종료·종일 여부·반복·알림·상태·식별자와 수정 확인용 메타데이터를 읽어 일정을 표시하고 동기화합니다. Google의 일정 응답에는 주최자·참석자 등 관련 메타데이터가 포함될 수 있습니다. 사용자가 요청한 일정 추가·수정·삭제를 같은 Google 계정의 캘린더에 반영합니다.</li><li><strong>Google OAuth 연결 정보:</strong> 액세스 토큰·갱신 토큰·만료 시각을 사용해 승인된 API 요청을 수행하고 연결을 유지합니다.</li><li><strong>Codex 계정·사용량과 표시 설정:</strong> 로컬 Codex App Server에서 계정·플랜·사용량·리셋권을 받아 위젯에 표시합니다. 창 위치·자동실행·고정·불투명도, 사용량과 공개 리셋 기록의 캐시 등을 PC에 저장합니다.</li></ul>
+  <h2>2. 요청하는 Google 권한</h2>
+  <ul><li><code>openid</code>, <code>email</code>: Google 계정을 식별하고 연결 계정의 이메일을 표시합니다.</li><li><code>https://www.googleapis.com/auth/calendar.calendarlist.readonly</code>: 연결할 캘린더를 선택하기 위해 목록을 읽습니다.</li><li><code>https://www.googleapis.com/auth/calendar.events</code>: 선택한 캘린더의 일정을 읽고 사용자가 요청한 추가·수정·삭제를 수행합니다.</li></ul>
+  <p>Google 연결은 선택 사항입니다. Google이 허용한 권한 범위 안에서만 기능을 제공하며, 읽기 전용 캘린더의 일정은 수정·삭제하지 않습니다.</p>
+  <h2>3. 정보의 저장과 보관 기간</h2>
+  <p>Google 연결 토큰, 연결 계정 이메일과 선택한 캘린더 식별자는 Windows의 현재 사용자 보호 기능(DPAPI)으로 보호해 <code>%LOCALAPPDATA%\CodexPulse\google-auth\credentials.dpapi</code>에 저장합니다. 앱의 Google 연결을 해제할 때까지 보관합니다.</p>
+  <p>가져온 Google 일정과 캘린더 목록은 실행 중 동기화를 위한 메모리 캐시로 처리하며, 현재 버전은 이를 별도 일정 데이터베이스 파일에 저장하지 않습니다. 연결 해제 시 캐시를 비우며 앱 종료 시 해당 프로세스의 캐시 사용이 끝납니다. 원본 일정은 Google 캘린더에 남습니다.</p>
+  <p>Codex 계정 표시 정보·마지막 사용량·공개 기록·표시 설정·결과 미확인 리셋 요청 정보는 <code>%LOCALAPPDATA%\CodexPulse\widget-state.json</code>에 저장하고, 사용자가 로컬 데이터를 삭제할 때까지 보관합니다. 이 파일에 Google 로그인 토큰이나 Google 일정 본문을 저장하지 않습니다.</p>
+  <h2>4. 전송과 제삼자 서비스</h2>
+  <p>앱은 Google 로그인·토큰 발급·계정 확인·캘린더 동기화를 위해 Google 서버와 통신합니다. 사용자가 저장하거나 삭제한 일정 변경은 Google Calendar API로 전송됩니다. 프로젝트 관리자가 운영하는 별도 서버로 Google 토큰이나 개인 일정을 수집·백업·동기화하지 않습니다.</p>
+  <p>Google 사용자 데이터를 판매하거나 광고 타기팅, 범용 AI·머신러닝 모델 학습에 사용하지 않습니다. Google 일정이나 토큰을 OpenAI, GitHub 또는 공개 리셋 자료 사이트에 전송하지 않습니다. Google API에서 받은 정보의 사용과 전송에는 제한된 사용(Limited Use) 요건을 포함한 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>를 적용합니다.</p>
+  <p>Codex 연결은 로컬 Codex 프로그램이 자체 인증과 서비스 통신을 처리합니다. 공개 리셋 자료를 받을 때는 OpenTheRank, 업데이트 확인·다운로드와 이 사이트 제공에는 GitHub를 사용합니다. 이들 서비스에는 요청에 필요한 IP 주소 등 일반적인 연결 정보가 전달될 수 있으며 각 제공자의 개인정보처리방침이 적용됩니다.</p>
+  <h2>5. 연결 해제·권한 철회·삭제</h2>
+  <ol><li><strong>이 PC에서 Google 연결 해제:</strong> 앱의 Google 연결 창에서 연결 해제를 선택하면 로컬 Google 연결 파일과 메모리 캐시를 제거합니다. Google의 원본 일정을 삭제하거나 계정의 Google 승인 자체를 철회하는 작업은 아닙니다.</li><li><strong>Google 계정에서 권한 철회:</strong> <a href="https://myaccount.google.com/connections">Google 계정의 서드 파티 연결 관리</a>에서 Codex Pulse의 접근 권한을 제거할 수 있습니다.</li><li><strong>모든 로컬 데이터 삭제:</strong> 앱을 종료하고 <code>%LOCALAPPDATA%\CodexPulse</code> 폴더를 삭제하면 저장한 연결 정보와 위젯 설정·캐시가 함께 제거됩니다. 앱 제거만으로 이 사용자 데이터가 삭제되지 않을 수 있습니다. 원본 Google 일정의 삭제는 Google 캘린더 또는 앱의 일정 삭제 기능에서 별도로 진행합니다.</li></ol>
+  <p>개인 Google 데이터의 중앙 보관 서버가 없으므로, 프로젝트 관리자에게 요청하는 대신 위 절차로 사용자 PC와 Google 계정에서 직접 데이터와 권한을 관리할 수 있습니다.</p>
+  <h2>6. 사이트 방문과 문의</h2>
+  <p>이 사이트는 GitHub Pages가 제공합니다. 사이트 자체에 광고·분석 스크립트나 문의 수집 폼을 넣지 않습니다. GitHub는 사이트 제공과 보안을 위해 접속 IP 등 방문 정보를 처리할 수 있습니다. 자세한 내용은 <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub 개인정보처리방침</a>을 확인하세요.</p>
+  <p>문의 담당은 CodexPulse 프로젝트 관리자입니다. <a href="https://github.com/BTL-LaserInnovation/CodexPulse/issues">프로젝트 문의·문제 신고</a>로 연락할 수 있습니다. 공개 게시판이므로 비밀번호, 로그인 토큰, 개인 일정 또는 불필요한 개인정보를 게시하지 마세요. 문의에 직접 게시한 내용은 GitHub에 공개·보관될 수 있습니다.</p>
+  <h2>7. 방침 변경</h2><p>데이터 처리 방식이 바뀌면 이 페이지의 내용과 수정일을 갱신합니다. Google 데이터에 대한 새로운 접근이나 다른 목적의 사용이 필요할 경우 적용 전에 사용자에게 알리고 필요한 동의를 다시 받습니다.</p>
+</main><footer><p>Codex Pulse · BTL-LaserInnovation/CodexPulse</p><div class="links"><a href="index.html">앱 소개</a><a href="terms.html">이용약관</a><a href="https://github.com/BTL-LaserInnovation/CodexPulse/issues">문의</a></div></footer>
+</div></body></html>
