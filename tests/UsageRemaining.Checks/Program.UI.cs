@@ -178,7 +178,7 @@ internal static partial class Program
                 if (!skipTray) await VerifyTrayRestoreAsync(window);
                 pin.IsChecked = true;
                 collapse.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Check(window.Height == 572 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
+                Check(window.Height == 558 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
                 Check(window.Opacity == 1 && BackgroundOpacity.GetValue(window) == .55, "expand preserves background opacity without fading the window");
                 var status = ((TextBlock)window.FindName("StatusText")).Text;
                 Console.WriteLine($"UI: status={status}; size={window.ActualWidth}x{window.ActualHeight}");
@@ -251,8 +251,8 @@ internal static partial class Program
             new Typeface(reset.FontFamily, reset.FontStyle, reset.FontWeight, reset.FontStretch), reset.FontSize,
             reset.Foreground, VisualTreeHelper.GetDpi(reset).PixelsPerDip)
         { LineHeight = reset.LineHeight, MaxTextWidth = reset.ActualWidth };
-        Check(reset.ActualHeight >= text.Height && reset.ActualHeight >= 26,
-            prefix + " reset text has room for two complete lines");
+        Check(!reset.Text.Contains('\n') && reset.ActualHeight >= text.Height && reset.ActualHeight >= 13,
+            prefix + " reset text has room for one complete line without a duplicate countdown");
         var bottom = reset.TranslatePoint(new Point(0, reset.ActualHeight), window).Y;
         var top = progress.TranslatePoint(new Point(0, 0), window).Y;
         Check(top - bottom >= 3, prefix + " progress bar is separated from reset text");

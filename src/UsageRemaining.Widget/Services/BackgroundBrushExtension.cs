@@ -12,8 +12,8 @@ public sealed class BackgroundBrushExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        var binding = new MultiBinding { Converter = BackgroundBrushConverter.Instance, Mode = BindingMode.OneWay };
-        binding.Bindings.Add(new Binding { Source = Brush });
+        // Binding sources hold DependencyObjects weakly; keep inline brushes alive with the binding.
+        var binding = new MultiBinding { Converter = BackgroundBrushConverter.Instance, ConverterParameter = Brush, Mode = BindingMode.OneWay };
         binding.Bindings.Add(new Binding
         {
             Path = new PropertyPath("(0)", BackgroundOpacity.ValueProperty),
@@ -28,8 +28,8 @@ public sealed class BackgroundBrushExtension : MarkupExtension
 
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values[0] is not Brush source) return DependencyProperty.UnsetValue;
-            var factor = values[1] is double value ? BackgroundOpacity.Normalize(value) : 1;
+            if (parameter is not Brush source) return DependencyProperty.UnsetValue;
+            var factor = values[0] is double value ? BackgroundOpacity.Normalize(value) : 1;
             // Resource brushes can be shared or frozen; change only this background's copy.
             var brush = source.CloneCurrentValue();
             brush.Opacity = source.Opacity * factor;

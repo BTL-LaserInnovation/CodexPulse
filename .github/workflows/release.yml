@@ -46,12 +46,16 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --calendar-week-ui
       - name: Run shared agenda UI checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --agenda-ui
+      - name: Run Google connection cancellation checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-connect-ui
       - name: Run Google calendar UI checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-ui
       - name: Run Google OAuth checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-oauth
       - name: Verify single instance with concurrent processes
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --single-instance
+      - name: Run quota text and transparency UI checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --ui-fixture --skip-tray
       - name: Install packaging tool
         run: dotnet tool install vpk --tool-path artifacts/tools --version 1.2.161
       - name: Verify pull request packaging without release registration

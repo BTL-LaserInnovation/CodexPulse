@@ -21,6 +21,12 @@ public partial class MainWindow
     private string? selectedGoogleEvent;
     private Window? googleDialog;
     private bool googleConnecting;
+    private bool googleConnectBusy;
+    private Task googleConnectTask = Task.CompletedTask;
+    private CancellationTokenSource? googleConnectCancellation;
+    private TimeSpan googleConnectTimeout = TimeSpan.FromMinutes(5);
+    private bool googleConnectCancelled;
+    private string? googleConnectNotice;
     private bool googleDeleting;
     private const double ListFontSize = 10;
 
@@ -53,19 +59,26 @@ public partial class MainWindow
     {
         if (!ready || closing) return;
         var connection = googleCalendar.State;
-        GoogleConnectButton.Content = connection.Connected ? "Google ✓" : "Google 연결";
-        GoogleConnectButton.ToolTip = connection.Connected
+        GoogleConnectButton.Content = googleConnecting
+            ? googleConnectCancellation?.IsCancellationRequested == true ? "취소 중…" : "연결 취소"
+            : connection.Connected ? "Google ✓" : "Google 연결";
+        AutomationProperties.SetName(GoogleConnectButton, googleConnecting
+            ? googleConnectCancellation?.IsCancellationRequested == true ? "Google 연결 취소 중" : "Google 연결 취소"
+            : "Google 캘린더 연결 및 관리");
+        GoogleConnectButton.ToolTip = googleConnecting ? "진행 중인 Google 연결을 취소합니다. 브라우저의 로그인 창은 닫아도 됩니다."
+            : googleError ?? googleConnectNotice ?? (connection.Connected
             ? connection.AccountEmail + "\n캘린더 선택 · 계정 변경 · 연결 해제"
-            : "Google 캘린더 연결 및 관리";
-        GoogleConnectButton.IsEnabled = !googleConnecting && !googleDeleting && !updateApplying;
-        GoogleAddButton.IsEnabled = !updateApplying && !googleConnecting && !googleDeleting;
-        GoogleRefreshButton.IsEnabled = !googleRefreshing && !googleConnecting && !googleDeleting && !updateApplying;
+            : "Google 캘린더 연결 및 관리");
+        GoogleConnectButton.IsEnabled = (!googleConnectBusy || googleConnecting && googleConnectCancellation?.IsCancellationRequested == false) && !googleDeleting && !updateApplying;
+        GoogleAddButton.IsEnabled = !updateApplying && !googleConnectBusy && !googleDeleting;
+        GoogleRefreshButton.IsEnabled = !googleRefreshing && !googleConnectBusy && !googleDeleting && !updateApplying;
         GoogleAddButton.ToolTip = !connection.Connected ? "Google 계정을 연결하고 일정 추가" : "선택한 날짜에 Google 일정 추가";
         var status = googleDeleting ? "Google 일정 삭제 처리 중…"
             : googleRefreshing ? "Google 일정 동기화 중…"
             : googleError is not null ? "Google · " + googleError
             : connection.Warning is not null ? "Google 동기화 확인 필요"
-            : googleConnecting ? "Google 계정 연결 중…"
+            : googleConnecting ? googleConnectCancellation?.IsCancellationRequested == true ? "Google 연결 취소 처리 중…" : "Google 계정 연결 중…"
+            : googleConnectNotice is not null ? googleConnectNotice
             : connection.Connected ? connection.LastSyncedAt is { } at ? $"Google · {LocalTime.Convert(at):HH:mm} 동기화" : "Google · 연결됨"
             : "Google 캘린더를 연결할 수 있습니다";
         SetGoogleRefreshStatus(status);
@@ -130,13 +143,24 @@ public partial class MainWindow
 
     private async void GoogleRefresh_Click(object sender, RoutedEventArgs e)
     {
-        if (closing || updateApplying || googleDialog is not null || googleConnecting || googleDeleting) return;
+        if (closing || updateApplying || googleDialog is not null || googleConnectBusy || googleDeleting) return;
         if (await EnsureGoogleConnectedAsync()) await RefreshGoogleAsync(force: true);
     }
 
     private async void GoogleConnect_Click(object sender, RoutedEventArgs e)
     {
-        if (closing || updateApplying || googleDialog is not null || googleConnecting || googleDeleting) return;
+        if (closing || updateApplying || googleDialog is not null || googleDeleting) return;
+        if (googleConnecting)
+        {
+            if (googleConnectCancellation is { IsCancellationRequested: false } attempt)
+            {
+                googleConnectCancelled = true;
+                attempt.Cancel();
+                RenderGoogleConnection();
+            }
+            return;
+        }
+        if (googleConnectBusy) return;
         if (!googleCalendar.State.Connected)
         {
             await EnsureGoogleConnectedAsync();
@@ -151,54 +175,100 @@ public partial class MainWindow
         if (closing || googleDeleting) return;
         var dialog = new GoogleAccountDialog(googleCalendar, OpenGoogleBrowser,
             token => googleCalendar.InitializeAsync(token), initialError: googleError) { Owner = this, Topmost = Topmost };
+        var completion = googleConnectBusy ? null : new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (completion is not null) googleConnectTask = completion.Task;
         googleDialog = dialog;
         BackgroundOpacity.SetValue(dialog, 1);
         try { dialog.ShowDialog(); }
-        finally { googleDialog = null; }
+        finally { googleDialog = null; completion?.TrySetResult(); }
     }
 
     private async Task<bool> EnsureGoogleConnectedAsync()
     {
-        if (closing || googleConnecting || googleDeleting) return false;
+        if (closing || googleConnectBusy || googleDeleting) return false;
         if (googleCalendar.State.Connected) return true;
+        using var attempt = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        attempt.CancelAfter(googleConnectTimeout);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        googleConnectTask = completion.Task;
+        googleConnectCancellation = attempt;
+        googleConnectCancelled = false;
+        googleConnectNotice = null;
         googleConnecting = true;
+        googleConnectBusy = true;
         googleError = null;
-        RenderGoogleConnection();
         try
         {
-            if (!googleInitialized) await InitializeGoogleAsync();
-            if (closing) return false;
-            await googleCalendar.InitializeAsync(lifetime.Token);
+            RenderGoogleConnection();
+            attempt.Token.ThrowIfCancellationRequested();
+            await googleCalendar.InitializeAsync(attempt.Token);
+            attempt.Token.ThrowIfCancellationRequested();
+            googleInitialized = true;
             if (!googleCalendar.State.IsConfigured)
             {
+                EndGoogleConnectAttempt(attempt);
                 SetGoogleRefreshStatus("Google 연결 준비가 아직 완료되지 않았습니다", attention: true);
                 ShowGoogleAccountDialog();
+                attempt.Token.ThrowIfCancellationRequested();
                 return googleCalendar.State.Connected;
             }
             SetGoogleRefreshStatus("브라우저에서 Google 로그인을 완료하세요");
-            await googleCalendar.ConnectAsync(OpenGoogleBrowser, lifetime.Token);
-            if (closing) return false;
+            await googleCalendar.ConnectAsync(address =>
+            {
+                attempt.Token.ThrowIfCancellationRequested();
+                OpenGoogleBrowser(address);
+            }, attempt.Token);
+            attempt.Token.ThrowIfCancellationRequested();
+            EndGoogleConnectAttempt(attempt);
             await RefreshGoogleAsync(force: true);
+            attempt.Token.ThrowIfCancellationRequested();
             if (googleCalendar.State.Connected) ShowGoogleAccountDialog();
+            attempt.Token.ThrowIfCancellationRequested();
             return googleCalendar.State.Connected;
         }
-        catch (OperationCanceledException) when (closing) { return false; }
+        catch (GoogleCalendarCredentialRestoreException ex)
+        {
+            googleError = ex.Message;
+            return false;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && (attempt.IsCancellationRequested || ex is GoogleCalendarConnectionTimeoutException))
+        {
+            if (!closing)
+                googleConnectNotice = googleConnectCancelled
+                    ? "Google 연결을 취소했습니다. Google 연결을 눌러 다시 시도하세요. 이전 브라우저 로그인 창은 닫아도 됩니다."
+                    : "Google 로그인 시간이 초과되었습니다. Google 연결을 눌러 다시 시도하세요. 이전 브라우저 로그인 창은 닫아도 됩니다.";
+            return false;
+        }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             googleError = ex.Message;
+            if (attempt.IsCancellationRequested) return false;
+            EndGoogleConnectAttempt(attempt);
             if (!closing) ShowGoogleAccountDialog();
+            if (attempt.IsCancellationRequested) return false;
             if (!closing && googleCalendar.State.Connected)
             {
                 await RefreshGoogleAsync(force: true);
-                return true;
+                return !closing && !attempt.IsCancellationRequested;
             }
             return false;
         }
         finally
         {
             googleConnecting = false;
-            if (!closing) RenderGoogleConnection();
+            googleConnectBusy = false;
+            googleConnectCancellation = null;
+            try { if (!closing) RenderGoogleConnection(); }
+            finally { completion.TrySetResult(); }
         }
+    }
+
+    private void EndGoogleConnectAttempt(CancellationTokenSource attempt)
+    {
+        attempt.CancelAfter(Timeout.InfiniteTimeSpan);
+        googleConnecting = false;
+        googleConnectCancellation = null;
+        RenderGoogleConnection();
     }
 
     private static void OpenGoogleBrowser(Uri address)
@@ -210,7 +280,7 @@ public partial class MainWindow
 
     private async void GoogleAdd_Click(object sender, RoutedEventArgs e)
     {
-        if (closing || updateApplying || googleDialog is not null || googleConnecting || googleDeleting) return;
+        if (closing || updateApplying || googleDialog is not null || googleConnectBusy || googleDeleting) return;
         if (!await EnsureGoogleConnectedAsync()) return;
         if (!googleCalendar.State.Calendars.Any(calendar => calendar.CanWrite))
         {
@@ -223,7 +293,7 @@ public partial class MainWindow
 
     private void OpenGoogleEvent(GoogleCalendarEvent? value)
     {
-        if (closing || updateApplying || googleDeleting || googleDialog is not null || !googleCalendar.State.Connected) return;
+        if (closing || updateApplying || googleDeleting || googleConnectBusy || googleDialog is not null || !googleCalendar.State.Connected) return;
         if (value is null && !googleCalendar.State.Calendars.Any(calendar => calendar.CanWrite)) return;
         var connectionAccount = googleCalendar.State.AccountEmail;
         async Task Apply(GoogleEventDialogRequest request, CancellationToken cancellationToken)
@@ -310,7 +380,7 @@ public partial class MainWindow
         if (CanDeleteGoogleEvent(value))
         {
             var delete = new Button { Name = "GoogleEventDeleteButton", Width = 22, Height = 22, Padding = new Thickness(0), Tag = value,
-                ToolTip = "이 Google 일정 삭제", IsEnabled = !googleDeleting && !googleRefreshing && !googleConnecting && !updateApplying,
+                ToolTip = "이 Google 일정 삭제", IsEnabled = !googleDeleting && !googleRefreshing && !googleConnectBusy && !updateApplying,
                 Content = new Path { Width = 10, Height = 12, Stretch = Stretch.Fill, Stroke = Theme("MutedBrush"), StrokeThickness = 1,
                     Data = Geometry.Parse("M 1,3 L 9,3 M 3,3 L 3,1 L 7,1 L 7,3 M 2,3 L 2.5,11 L 7.5,11 L 8,3 M 4,5 L 4,9 M 6,5 L 6,9") } };
             Grid.SetColumn(delete, 1);

@@ -141,6 +141,7 @@ public partial class GoogleAccountDialog : Window
                 StatusText.Text = "브라우저에서 Google 계정 연결을 완료하세요…";
             }
             await service.ConnectAsync(openBrowser, token);
+            token.ThrowIfCancellationRequested();
             RenderState(true);
             StatusText.Text = "Google 계정이 연결되었습니다. 표시할 캘린더를 선택하세요.";
         }, service.State.IsConfigured ? "브라우저에서 Google 계정 연결을 완료하세요…" : "Google 연결 준비를 확인하는 중…");

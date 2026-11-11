@@ -12,7 +12,7 @@ namespace UsageRemaining.Checks;
 
 internal static partial class Program
 {
-    private static int GoogleUiChecks(bool agendaOnly = false)
+    private static int GoogleUiChecks(bool agendaOnly = false, bool connectOnly = false)
     {
         var folder = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "google-ui", Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("USAGEREMAINING_DATA_DIR", folder);
@@ -36,7 +36,13 @@ internal static partial class Program
                 DetachStartupRuntimeLoading(window);
                 window.Show();
                 window.UpdateLayout();
-                Check(window.Width == 360 && window.Height == 572, "Google integration retains 360 DIP width and provides expanded calendar detail height");
+                if (connectOnly)
+                {
+                    await GoogleConnectionCancelChecks(window, google);
+                    Console.WriteLine($"All {passed} Google connection checks passed. Fake accounts and isolated settings only.");
+                    return;
+                }
+                Check(window.Width == 360 && window.Height == 558, "Google integration retains 360 DIP width and provides expanded calendar detail height");
                 Check(((FrameworkElement)window.FindName("GoogleCalendarOverlay")).ActualWidth > 0,
                     "Google calendar overlay is measured with the month grid");
                 SetWindowField(window, "selectedDate", new DateTime(2026, 11, 9));
@@ -290,6 +296,7 @@ internal static partial class Program
         public int BrowserCallbacks { get; private set; }
         public bool InvokeBrowserFixture { get; set; }
         public Exception? ConnectFailure { get; set; }
+        public Func<Action<Uri>, CancellationToken, Task>? ConnectBehavior { get; set; }
         public GoogleCalendarState? StateAfterInitialize { get; set; }
         public event EventHandler? Changed;
         public void SetFixtureState(GoogleCalendarState value) => State = value;
@@ -313,16 +320,18 @@ internal static partial class Program
             }
             return Task.CompletedTask;
         }
-        public Task ConnectAsync(Action<Uri> openBrowser, CancellationToken cancellationToken = default)
+        public async Task ConnectAsync(Action<Uri> openBrowser, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(openBrowser);
+            cancellationToken.ThrowIfCancellationRequested();
             Connects++;
             BrowserCallbacks++;
             if (InvokeBrowserFixture) openBrowser(new Uri("https://accounts.google.com/fixture-only"));
+            if (ConnectBehavior is not null) await ConnectBehavior(openBrowser, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (ConnectFailure is not null) throw ConnectFailure;
             State = State with { Connected = true };
             Changed?.Invoke(this, EventArgs.Empty);
-            return Task.CompletedTask;
         }
         public List<(DateTimeOffset Start, DateTimeOffset End)> RefreshRequests { get; } = [];
         public Func<DateTimeOffset, DateTimeOffset, CancellationToken, Task>? RefreshBehavior { get; set; }

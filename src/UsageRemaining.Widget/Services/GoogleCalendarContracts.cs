@@ -25,3 +25,13 @@ public class GoogleCalendarException : Exception
 {
     public GoogleCalendarException(string message) : base(message) { }
 }
+
+internal sealed class GoogleCalendarConnectionTimeoutException : GoogleCalendarException
+{
+    public GoogleCalendarConnectionTimeoutException() : base("Google 로그인 시간이 초과되었습니다. 다시 연결해 주세요.") { }
+}
+
+internal sealed class GoogleCalendarCredentialRestoreException : GoogleCalendarException
+{
+    public GoogleCalendarCredentialRestoreException() : base("취소한 Google 연결의 저장 정보를 복구하지 못했습니다. 앱에서 Google 연결을 다시 확인해 주세요.") { }
+}

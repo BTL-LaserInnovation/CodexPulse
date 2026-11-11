@@ -12,7 +12,7 @@ public partial class MainWindow
     private void ApplyCollapsedState()
     {
         ApplyCalendarCollapsedState();
-        Height = state.IsCollapsed ? desiredCompactHeight : state.IsCalendarCollapsed ? 422 : 572;
+        Height = state.IsCollapsed ? desiredCompactHeight : state.IsCalendarCollapsed ? 408 : 558;
         ExpandedPanel.Visibility = state.IsCollapsed ? Visibility.Collapsed : Visibility.Visible;
         CompactPanel.Visibility = state.IsCollapsed ? Visibility.Visible : Visibility.Collapsed;
         CollapseIcon.Data = Geometry.Parse(state.IsCollapsed ? "M 0,0 L 5,5 10,0" : "M 0,5 L 5,0 10,5");
@@ -22,7 +22,7 @@ public partial class MainWindow
 
     private void ApplyCalendarCollapsedState()
     {
-        ExpandedPanel.Height = state.IsCalendarCollapsed ? 358 : 508;
+        ExpandedPanel.Height = state.IsCalendarCollapsed ? 344 : 494;
         CalendarRow.Height = new GridLength(state.IsCalendarCollapsed ? 30 : 180);
         DaysPanel.Rows = VisibleCalendarRange.RowCount;
         CalendarCollapseIcon.Data = Geometry.Parse(state.IsCalendarCollapsed ? "M 0,0 L 5,5 10,0" : "M 0,5 L 5,0 10,5");

@@ -51,6 +51,7 @@ public sealed partial class GoogleCalendarService : IGoogleCalendarService
         await _gate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
+            linked.Token.ThrowIfCancellationRequested();
             if (_ownsConfiguration && _credentials is null)
             {
                 _configuration = GoogleOAuthConfiguration.Load();
@@ -64,6 +65,7 @@ public sealed partial class GoogleCalendarService : IGoogleCalendarService
                 Publish(_state with { Warning = "저장된 Google 연결 정보를 읽을 수 없습니다. 다시 연결해 주세요." });
                 return;
             }
+            linked.Token.ThrowIfCancellationRequested();
             if (saved is null || string.IsNullOrWhiteSpace(saved.RefreshToken)) return;
             _credentials = saved;
             Publish(_state with { Connected = true, AccountEmail = saved.AccountEmail,
@@ -80,6 +82,7 @@ public sealed partial class GoogleCalendarService : IGoogleCalendarService
         await _gate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
+            linked.Token.ThrowIfCancellationRequested();
             if (!_configuration.IsConfigured) throw new GoogleCalendarException(_configuration.ConfigurationMessage);
             var verifier = Base64Url(RandomNumberGenerator.GetBytes(64));
             var state = Base64Url(RandomNumberGenerator.GetBytes(32));
@@ -93,17 +96,26 @@ public sealed partial class GoogleCalendarService : IGoogleCalendarService
             listener.Prefixes.Add(redirect);
             try { listener.Start(); }
             catch (HttpListenerException) { throw new GoogleCalendarException("Google 로그인용 로컬 수신기를 열 수 없습니다. 잠시 후 다시 시도해 주세요."); }
+            using var stopListener = linked.Token.Register(() =>
+            {
+                try { listener.Stop(); }
+                catch (ObjectDisposedException) { }
+                catch (HttpListenerException) { }
+            });
             var authorization = new Uri("https://accounts.google.com/o/oauth2/v2/auth?" + Query(new Dictionary<string, string>
             {
                 ["client_id"] = _configuration.ClientId, ["redirect_uri"] = redirect, ["response_type"] = "code",
                 ["scope"] = Scopes, ["state"] = state, ["code_challenge"] = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))),
                 ["code_challenge_method"] = "S256", ["access_type"] = "offline", ["prompt"] = "consent select_account"
             }));
+            linked.Token.ThrowIfCancellationRequested();
             openBrowser(authorization);
             string? code = null;
             while (code is null)
             {
-                var context = await listener.GetContextAsync().WaitAsync(linked.Token).ConfigureAwait(false);
+                linked.Token.ThrowIfCancellationRequested();
+                var context = await listener.GetContextAsync().ConfigureAwait(false);
+                linked.Token.ThrowIfCancellationRequested();
                 var valid = context.Request.Url?.AbsolutePath == "/" && context.Request.QueryString["state"] == state;
                 var error = context.Request.QueryString["error"];
                 code = valid ? context.Request.QueryString["code"] : null;
@@ -134,15 +146,43 @@ public sealed partial class GoogleCalendarService : IGoogleCalendarService
             var calendars = await ListCalendarsAsync(candidate, linked.Token).ConfigureAwait(false);
             candidate = candidate with { AccountEmail = email, SelectedCalendarIds = calendars.Where(c => c.Primary).Select(c => c.Id).ToArray() };
             linked.Token.ThrowIfCancellationRequested();
-            await _store.SaveAsync(candidate, linked.Token).ConfigureAwait(false);
+            var previous = await _store.LoadAsync(linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            var persisted = false;
+            try
+            {
+                await _store.SaveAsync(candidate, linked.Token).ConfigureAwait(false);
+                persisted = true;
+                linked.Token.ThrowIfCancellationRequested();
+            }
+            catch (Exception saveError) when (saveError is not OutOfMemoryException && linked.IsCancellationRequested)
+            {
+                if (!persisted) throw new OperationCanceledException(linked.Token);
+                // Keep the gate until rollback finishes, so a cancelled attempt cannot
+                // overwrite a newer connection or leave its credentials on disk.
+                try
+                {
+                    if (previous is null) await _store.ClearAsync(CancellationToken.None).ConfigureAwait(false);
+                    else await _store.SaveAsync(previous, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception error) when (error is not OutOfMemoryException)
+                {
+                    throw new GoogleCalendarCredentialRestoreException();
+                }
+                throw new OperationCanceledException(linked.Token);
+            }
+            // Completion is committed synchronously after the final cancellation check.
             _credentials = candidate;
             _cache = new(StringComparer.Ordinal);
             Publish(_state with { Connected = true, AccountEmail = email, Calendars = calendars, Events = [],
                 SelectedCalendarIds = candidate.SelectedCalendarIds.ToHashSet(StringComparer.Ordinal), LastSyncedAt = null, Warning = null });
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && !_lifetime.IsCancellationRequested && !_operations.IsCancellationRequested)
+        catch (Exception error) when (linked.IsCancellationRequested &&
+            error is OperationCanceledException or HttpListenerException or ObjectDisposedException or IOException)
         {
-            throw new GoogleCalendarException("Google 로그인 시간이 초과되었습니다. 다시 연결해 주세요.");
+            if (!cancellationToken.IsCancellationRequested && !_lifetime.IsCancellationRequested && !_operations.IsCancellationRequested)
+                throw new GoogleCalendarConnectionTimeoutException();
+            throw new OperationCanceledException("Google 연결이 취소되었습니다.", error, linked.Token);
         }
         finally { _gate.Release(); }
     }

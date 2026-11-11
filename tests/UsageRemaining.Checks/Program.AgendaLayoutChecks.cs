@@ -45,7 +45,7 @@ internal static partial class Program
                         && bounds.All(value => Math.Abs((value.Top + value.Bottom) / 2 - (bounds[0].Top + bounds[0].Bottom) / 2) < 1)
                         && Math.Abs(bounds[^1].Right - VisualBounds(scroll, window).Right) < .1,
                         $"agenda date refresh add and far-right legend fit one aligned row in {(weekly ? "week" : "month")} with {count} entries");
-                    Check(Math.Abs(scroll.ViewportHeight - 48) < .1 && window.Height == (weekly ? 422 : 572)
+                    Check(Math.Abs(scroll.ViewportHeight - 48) < .1 && window.Height == (weekly ? 408 : 558)
                         && (scroll.ComputedVerticalScrollBarVisibility == Visibility.Visible) == (count > 2),
                         "agenda retains two-row viewport and stable window height; overflow only above two entries");
                     if (count == 3)

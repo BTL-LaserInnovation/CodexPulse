@@ -85,7 +85,7 @@ internal static partial class Program
                 var toggle = (Button)window.FindName("CalendarCollapseButton");
                 var previous = (Button)window.FindName("PreviousPeriodButton");
                 var next = (Button)window.FindName("NextPeriodButton");
-                Check(days.Children.Count == 42 && window.Height == 572, "calendar initially shows complete month at existing expanded height");
+                Check(days.Children.Count == 42 && window.Height == 558, "calendar initially shows complete month at existing expanded height");
                 toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 window.UpdateLayout();
                 Check(state.IsCalendarCollapsed && !state.IsCollapsed && days.Rows == 1 && days.Children.Count == 7,
@@ -93,8 +93,8 @@ internal static partial class Program
                 Check(WeekDates(window).SequenceEqual(Enumerable.Range(0, 7).Select(index => thisWeek.Start.AddDays(index)))
                     && WindowField<DateTime>(window, "selectedDate") == today,
                     "entering week shows and selects current PC-local today in its Sunday-Saturday week");
-                Check(window.Height == 422 && Math.Abs(days.ActualHeight - 30) < .1
-                    && Math.Abs(((FrameworkElement)window.FindName("ExpandedPanel")).ActualHeight - 358) < .1,
+                Check(window.Height == 408 && Math.Abs(days.ActualHeight - 30) < .1
+                    && Math.Abs(((FrameworkElement)window.FindName("ExpandedPanel")).ActualHeight - 344) < .1,
                     "calendar week removes five rows and 150 DIP of window height");
                 Check(AutomationProperties.GetName(previous) == "이전 주" && AutomationProperties.GetName(next) == "다음 주"
                     && AutomationProperties.GetName(toggle).Contains("월"), "calendar and navigation accessible labels reflect week mode");
@@ -188,11 +188,11 @@ internal static partial class Program
                     "title collapse keeps calendar week preference independent");
                 ((Button)window.FindName("CollapseButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 window.UpdateLayout();
-                Check(!state.IsCollapsed && state.IsCalendarCollapsed && window.Height == 422 && days.Children.Count == 7,
+                Check(!state.IsCollapsed && state.IsCalendarCollapsed && window.Height == 408 && days.Children.Count == 7,
                     "title expand restores calendar week size rather than full month");
                 toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 window.UpdateLayout();
-                Check(!state.IsCalendarCollapsed && days.Rows == 6 && days.Children.Count == 42 && window.Height == 572
+                Check(!state.IsCalendarCollapsed && days.Rows == 6 && days.Children.Count == 42 && window.Height == 558
                     && AutomationProperties.GetName(previous) == "이전 달", "calendar expand restores complete month and month navigation");
                 var beforeMonth = WindowField<DateTime>(window, "month");
                 next.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -207,7 +207,7 @@ internal static partial class Program
                 DetachStartupRuntimeLoading(window);
                 window.Show();
                 window.UpdateLayout();
-                Check(window.Height == 422 && ((UniformGrid)window.FindName("DaysPanel")).Children.Count == 7,
+                Check(window.Height == 408 && ((UniformGrid)window.FindName("DaysPanel")).Children.Count == 7,
                     "reopening app restores calendar-only collapsed preference");
                 window.Close();
                 await WaitUntilAsync(() => WindowField<bool>(window, "closeComplete"), "restored week fixture closes cleanly");

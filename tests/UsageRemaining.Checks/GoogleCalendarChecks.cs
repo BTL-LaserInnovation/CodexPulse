@@ -32,6 +32,7 @@ internal static partial class GoogleCalendarChecks
             await OAuthLoopback(check);
             await OAuthPostCallbackFailures(check);
             await OAuthCommitBoundary(check);
+            await OAuthCancelRetryBoundaries(check);
         }
     }
 
@@ -329,12 +330,13 @@ internal static partial class GoogleCalendarChecks
         };
         public GoogleCalendarCredentials? Value { get; set; } = Fixture;
         public Func<GoogleCalendarCredentials, CancellationToken, Task>? Saving { get; set; }
+        public bool IgnoreCancellationAfterSaving { get; set; }
         public Task<GoogleCalendarCredentials?> LoadAsync(CancellationToken cancellationToken) { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(Value); }
         public async Task SaveAsync(GoogleCalendarCredentials credentials, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (Saving is not null) await Saving(credentials, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            if (!IgnoreCancellationAfterSaving) cancellationToken.ThrowIfCancellationRequested();
             Value = credentials;
         }
         public Task ClearAsync(CancellationToken cancellationToken) { cancellationToken.ThrowIfCancellationRequested(); Value = null; return Task.CompletedTask; }

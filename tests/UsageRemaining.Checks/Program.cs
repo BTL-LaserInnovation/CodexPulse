@@ -38,6 +38,7 @@ internal static partial class Program
             if (args.Contains("--update-ui")) return UpdateUiChecks();
             if (args.Contains("--calendar-week-ui")) return CalendarWeekUiChecks();
             if (args.Contains("--agenda-ui")) return GoogleUiChecks(agendaOnly: true);
+            if (args.Contains("--google-connect-ui")) return GoogleUiChecks(connectOnly: true);
             if (args.Contains("--google-ui")) return GoogleUiChecks();
             if (args.Contains("--google-preview") || args.Contains("--google-preview-smoke")) return GooglePreview(args.Contains("--google-preview-smoke"));
             if (args.Contains("--ui") || args.Contains("--ui-fixture")) return UiChecks(args.Contains("--ui-fixture"), args.Contains("--skip-tray"));

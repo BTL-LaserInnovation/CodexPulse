@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="clr-namespace:UsageRemaining.Widget.Services"
         Title="Codex Pulse" Icon="pack://application:,,,/CodexPulse;component/Assets/CodexPulse.ico"
-        Width="360" Height="572" MinWidth="360" MinHeight="80"
+        Width="360" Height="558" MinWidth="360" MinHeight="80"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent" ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen" FontFamily="Segoe UI, Malgun Gothic" UseLayoutRounding="True"
         AutomationProperties.Name="Codex 남은 사용량 위젯">
@@ -133,9 +133,9 @@
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="ExpandedPanel" Grid.Row="1" Height="508" VerticalAlignment="Top">
+            <Grid x:Name="ExpandedPanel" Grid.Row="1" Height="494" VerticalAlignment="Top">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="20" /><RowDefinition Height="90" /><RowDefinition Height="24" />
+                    <RowDefinition Height="20" /><RowDefinition Height="76" /><RowDefinition Height="24" />
                     <RowDefinition Height="16" /><RowDefinition x:Name="CalendarRow" Height="180" /><RowDefinition Height="78" />
                     <RowDefinition Height="18" /><RowDefinition Height="54" /><RowDefinition Height="28" />
                 </Grid.RowDefinitions>
@@ -151,7 +151,7 @@
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                     <Border Background="{services:BackgroundBrush Brush=#243452}" BorderBrush="#405E6C" BorderThickness="1" CornerRadius="12" Padding="9,4">
                         <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="14" /><RowDefinition Height="28" /><RowDefinition Height="28" /><RowDefinition Height="4" /><RowDefinition Height="4" /></Grid.RowDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="14" /><RowDefinition Height="28" /><RowDefinition Height="14" /><RowDefinition Height="4" /><RowDefinition Height="4" /></Grid.RowDefinitions>
                             <TextBlock x:Name="PrimaryName" Text="한도 정보 없음" Foreground="{StaticResource MintBrush}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                             <TextBlock x:Name="PrimaryPercent" Grid.Row="1" Text="—" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center" AutomationProperties.Name="첫 번째 한도 남은 사용량" />
                             <TextBlock x:Name="PrimaryReset" Grid.Row="2" Text="연결 후 표시" Foreground="{StaticResource MutedBrush}" FontSize="9" TextWrapping="NoWrap" LineHeight="13" LineStackingStrategy="BlockLineHeight" />
@@ -160,7 +160,7 @@
                     </Border>
                     <Border Grid.Column="2" Background="{services:BackgroundBrush Brush=#2B2F56}" BorderBrush="#544A7B" BorderThickness="1" CornerRadius="12" Padding="9,4">
                         <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="14" /><RowDefinition Height="28" /><RowDefinition Height="28" /><RowDefinition Height="4" /><RowDefinition Height="4" /></Grid.RowDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="14" /><RowDefinition Height="28" /><RowDefinition Height="14" /><RowDefinition Height="4" /><RowDefinition Height="4" /></Grid.RowDefinitions>
                             <TextBlock x:Name="SecondaryName" Text="한도 정보 없음" Foreground="{StaticResource VioletBrush}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                             <TextBlock x:Name="SecondaryPercent" Grid.Row="1" Text="—" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center" AutomationProperties.Name="두 번째 한도 남은 사용량" />
                             <TextBlock x:Name="SecondaryReset" Grid.Row="2" Text="연결 후 표시" Foreground="{StaticResource MutedBrush}" FontSize="9" TextWrapping="NoWrap" LineHeight="13" LineStackingStrategy="BlockLineHeight" />

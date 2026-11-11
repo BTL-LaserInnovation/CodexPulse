@@ -360,10 +360,7 @@ public partial class MainWindow : Window
         if (window?.ResetsAt is not { } at)
             reset.Text = window is null ? "제공된 한도 없음" : "리셋 시각 미제공";
         else
-        {
-            var remaining = Countdown(at);
-            reset.Text = $"{remaining}\n{LocalTime.Convert(at):MM/dd HH:mm} 리셋";
-        }
+            reset.Text = $"{LocalTime.Convert(at):MM-dd HH:mm} 리셋";
         reset.ToolTip = window?.ResetsAt is { } time ? $"다음 리셋: {LocalTime.Convert(time):yyyy-MM-dd HH:mm:ss} {LocalTime.Label(time)}\nPC 시간대: {TimeZoneInfo.Local.DisplayName}\n서버가 제공한 다음 일정만 표시합니다." : reset.Text;
         percent.ToolTip = "남은 사용량 비율";
     }
@@ -500,7 +497,7 @@ public partial class MainWindow : Window
         if (closeComplete) return;
         e.Cancel = true;
         if (closing) return;
-        if (updateApplying && (creditAction || resetDialog is not null || refreshing || googleDialog is not null || googleDeleting || !SaveSettings(reportWarning: false)))
+        if (updateApplying && (creditAction || resetDialog is not null || refreshing || googleConnectBusy || googleDialog is not null || googleDeleting || !SaveSettings(reportWarning: false)))
         {
             RestoreAfterUpdateFailure("업데이트를 적용하지 못했습니다. 진행 중인 작업과 설정 저장 상태를 확인한 후 다시 누르세요.");
             return;
@@ -532,6 +529,7 @@ public partial class MainWindow : Window
         lifetime.Cancel();
         resetDialog?.Close();
         googleDialog?.Close();
+        await googleConnectTask;
         googleCalendar.Changed -= GoogleCalendar_Changed;
         googleCalendar.Dispose();
         publicClient.Dispose();

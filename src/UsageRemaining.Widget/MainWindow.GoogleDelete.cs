@@ -13,7 +13,7 @@ public partial class MainWindow
 
     private async Task DeleteGoogleEventAsync(GoogleCalendarEvent value)
     {
-        if (closing || updateApplying || googleDeleting || googleRefreshing || googleConnecting || googleDialog is not null
+        if (closing || updateApplying || googleDeleting || googleRefreshing || googleConnectBusy || googleDialog is not null
             || !googleCalendar.State.Connected || !CanDeleteGoogleEvent(value)) return;
         var account = googleCalendar.State.AccountEmail;
         var key = CalendarEventPresentation.Key(value);
