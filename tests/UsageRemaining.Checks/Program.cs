@@ -36,6 +36,8 @@ internal static partial class Program
                 return CompactPreview(previewIndex + 1 < args.Length ? args[previewIndex + 1] : "weekly");
             if (args.Contains("--startup-preview") || args.Contains("--startup-ui")) return StartupUiChecks();
             if (args.Contains("--update-ui")) return UpdateUiChecks();
+            if (args.Contains("--calendar-week-ui")) return CalendarWeekUiChecks();
+            if (args.Contains("--agenda-ui")) return GoogleUiChecks(agendaOnly: true);
             if (args.Contains("--google-ui")) return GoogleUiChecks();
             if (args.Contains("--google-preview") || args.Contains("--google-preview-smoke")) return GooglePreview(args.Contains("--google-preview-smoke"));
             if (args.Contains("--ui") || args.Contains("--ui-fixture")) return UiChecks(args.Contains("--ui-fixture"), args.Contains("--skip-tray"));
@@ -66,6 +68,7 @@ internal static partial class Program
         Check(Parse("null").Windows.Count == 0 && Parse("{}").Windows.Count == 0, "missing provider result");
         Check(Parse("""{"rateLimits":{"primary":{"usedPercent":1,"resetsAt":253402300799}}}""").Windows.Single().ResetsAt == DateTimeOffset.FromUnixTimeSeconds(253402300799), "valid UTC boundary retained for timezone conversion");
         LocalTimeChecks.Run(Check);
+        CalendarWeekRangeChecks();
         Check(Parse("""{"rateLimitsByLimitId":{"codex":{"primary":{"usedPercent":30}}},"rateLimits":{"primary":{"usedPercent":90}}}""").Windows.Single().RemainingPercent == 70, "prefer Codex bucket");
         Check(Parse("""{"rateLimits":{"limitId":"unrelated","primary":{"usedPercent":10}}}""").Windows.Count == 0, "ignore unrelated quota");
         var history = new AccountHistory();

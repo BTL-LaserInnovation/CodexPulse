@@ -8,6 +8,7 @@ public sealed class WidgetState
     public double? Left { get; set; }
     public double? Top { get; set; }
     public bool IsCollapsed { get; set; }
+    public bool IsCalendarCollapsed { get; set; }
     public PublicResetCalendar? PublicCalendar { get; set; }
     public string? CodexExecutable { get; set; }
     public string? ActiveAccount { get; set; }

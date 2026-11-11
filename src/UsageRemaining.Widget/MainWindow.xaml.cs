@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private UsageSnapshot? snapshot;
     private DateTime month = new(LocalTime.Convert(DateTimeOffset.UtcNow).Year, LocalTime.Convert(DateTimeOffset.UtcNow).Month, 1);
     private DateTime selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
+    private DateTime visibleWeek = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
     private DateTime displayedToday = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
     private TimeZoneInfo displayZone = TimeZoneInfo.Local;
     private TimeSpan displayOffset = LocalTime.Convert(DateTimeOffset.UtcNow).Offset;
@@ -160,17 +161,25 @@ public partial class MainWindow : Window
         }
         var local = LocalTime.Convert(now);
         if (!zoneChanged && local.Date == displayedToday && local.Offset == displayOffset) return;
-        var followingToday = selectedDate == displayedToday && month.Year == displayedToday.Year && month.Month == displayedToday.Month;
-        if (followingToday)
-        {
-            selectedDate = local.Date;
-            month = new(selectedDate.Year, selectedDate.Month, 1);
-        }
-        displayedToday = local.Date;
+        UpdateCalendarToday(local.Date);
         displayOffset = local.Offset;
         RenderCalendar();
         RenderCredits();
         _ = RefreshGoogleAsync(force: true);
+    }
+
+    private void UpdateCalendarToday(DateTime localToday)
+    {
+        var followingToday = selectedDate == displayedToday && (state.IsCalendarCollapsed
+            ? VisibleCalendarRange.Contains(displayedToday)
+            : month.Year == displayedToday.Year && month.Month == displayedToday.Month);
+        if (followingToday)
+        {
+            selectedDate = localToday.Date;
+            month = new(selectedDate.Year, selectedDate.Month, 1);
+            visibleWeek = selectedDate;
+        }
+        displayedToday = localToday.Date;
     }
 
     private void EnsureClient()
@@ -364,17 +373,60 @@ public partial class MainWindow : Window
     {
         if (sender is Button { Tag: DateTime date })
         {
-            var previousMonth = month;
+            var previousRange = VisibleCalendarRange;
             selectedDate = date;
             selectedGoogleEvent = null;
-            month = new(date.Year, date.Month, 1);
+            if (!state.IsCalendarCollapsed) month = new(date.Year, date.Month, 1);
             RenderCalendar();
-            if (previousMonth != month) _ = RefreshGoogleAsync(force: true);
+            if (previousRange != VisibleCalendarRange) _ = RefreshGoogleAsync(force: true);
         }
     }
-    private void PreviousMonth_Click(object sender, RoutedEventArgs e) { if (month.Year > 2) { month = month.AddMonths(-1); RenderCalendar(); _ = RefreshGoogleAsync(force: true); } }
-    private void NextMonth_Click(object sender, RoutedEventArgs e) { if (month.Year < 9998) { month = month.AddMonths(1); RenderCalendar(); _ = RefreshGoogleAsync(force: true); } }
-    private void Today_Click(object sender, RoutedEventArgs e) { selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date; month = new(selectedDate.Year, selectedDate.Month, 1); selectedGoogleEvent = null; RenderCalendar(); _ = RefreshGoogleAsync(force: true); }
+    private void PreviousMonth_Click(object sender, RoutedEventArgs e) => NavigateCalendar(-1);
+    private void NextMonth_Click(object sender, RoutedEventArgs e) => NavigateCalendar(1);
+
+    private void NavigateCalendar(int direction)
+    {
+        if (state.IsCalendarCollapsed)
+        {
+            var candidate = visibleWeek.AddDays(direction * 7);
+            if (candidate.Year < 2 || candidate.Year > 9998) return;
+            visibleWeek = candidate;
+        }
+        else
+        {
+            if (direction < 0 && month.Year <= 2 || direction > 0 && month.Year >= 9998) return;
+            month = month.AddMonths(direction);
+        }
+        RenderCalendar();
+        _ = RefreshGoogleAsync(force: true);
+    }
+
+    private void Today_Click(object sender, RoutedEventArgs e)
+    {
+        selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
+        month = new(selectedDate.Year, selectedDate.Month, 1);
+        visibleWeek = selectedDate;
+        selectedGoogleEvent = null;
+        RenderCalendar();
+        _ = RefreshGoogleAsync(force: true);
+    }
+
+    private void ToggleCalendarCollapse_Click(object sender, RoutedEventArgs e)
+    {
+        state.IsCalendarCollapsed = !state.IsCalendarCollapsed;
+        if (state.IsCalendarCollapsed)
+        {
+            selectedDate = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
+            visibleWeek = selectedDate;
+            selectedGoogleEvent = null;
+        }
+        month = new(selectedDate.Year, selectedDate.Month, 1);
+        ApplyCollapsedState();
+        RenderCalendar();
+        ClampToWorkArea();
+        SaveSettings();
+        _ = RefreshGoogleAsync(force: true);
+    }
     private void Topmost_Changed(object sender, RoutedEventArgs e) { if (ready) { Topmost = TopmostCheck.IsChecked == true; state.AlwaysOnTop = Topmost; SaveSettings(); } }
     private void Opacity_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

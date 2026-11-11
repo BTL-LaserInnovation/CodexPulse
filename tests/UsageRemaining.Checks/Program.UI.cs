@@ -178,7 +178,7 @@ internal static partial class Program
                 if (!skipTray) await VerifyTrayRestoreAsync(window);
                 pin.IsChecked = true;
                 collapse.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Check(window.Height == 604 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
+                Check(window.Height == 572 && ((FrameworkElement)window.FindName("ExpandedPanel")).Visibility == Visibility.Visible, "expand restores full view");
                 Check(window.Opacity == 1 && BackgroundOpacity.GetValue(window) == .55, "expand preserves background opacity without fading the window");
                 var status = ((TextBlock)window.FindName("StatusText")).Text;
                 Console.WriteLine($"UI: status={status}; size={window.ActualWidth}x{window.ActualHeight}");

@@ -10,6 +10,8 @@ namespace UsageRemaining.Widget;
 public partial class MainWindow
 {
     private const double CalendarDateHeight = 20;
+    private CalendarDisplayRange VisibleCalendarRange => state.IsCalendarCollapsed
+        ? CalendarDisplayRange.FromWeek(visibleWeek) : CalendarDisplayRange.FromMonth(month);
     private sealed record CalendarEntry(string Text, string Color, string? Url, string? Summary = null);
 
     private async Task RefreshPublicCalendarAsync()
@@ -40,15 +42,22 @@ public partial class MainWindow
     private void RenderCalendar()
     {
         if (!ready) return;
-        MonthText.Text = month.ToString("yyyy년 M월", CultureInfo.GetCultureInfo("ko-KR"));
+        var range = VisibleCalendarRange;
+        var last = range.EndExclusive.AddDays(-1);
+        MonthText.Text = state.IsCalendarCollapsed
+            ? $"{range.Start:yyyy.MM.dd}–{last:MM.dd}"
+            : month.ToString("yyyy년 M월", CultureInfo.GetCultureInfo("ko-KR"));
+        MonthText.ToolTip = state.IsCalendarCollapsed
+            ? $"{range.Start:yyyy-MM-dd} ~ {last:yyyy-MM-dd} · 일요일–토요일"
+            : MonthText.Text;
         PublicStatusText.Text = publicStatus;
         PublicStatusText.ToolTip = state.PublicCalendar is { } feed
             ? $"출처: OpenTheRank(제삼자 기록)\n{feed.Attribution}\n자료 생성: {(feed.GeneratedAt is { } generated ? $"{LocalTime.Convert(generated):yyyy-MM-dd HH:mm} {LocalTime.Label(generated)}" : "미제공")}\n마지막 수신: {LocalTime.Convert(feed.FetchedAt):MM/dd HH:mm}\n공개 기록이며 개인 계정 적용 여부와 다를 수 있습니다. 예고는 게시 시각을 표시합니다. 5분마다 확인합니다."
             : "공개 이력을 인터넷에서 불러옵니다. 확률 예측은 표시하지 않습니다.";
         DaysPanel.Children.Clear();
-        var first = month.AddDays(-(int)month.DayOfWeek);
+        var first = range.Start;
         var today = LocalTime.Convert(DateTimeOffset.UtcNow).Date;
-        for (var i = 0; i < 42; i++)
+        for (var i = 0; i < range.DayCount; i++)
         {
             var day = first.AddDays(i);
             var events = EventsFor(day);
@@ -65,8 +74,9 @@ public partial class MainWindow
                 Text = day.Day.ToString(CultureInfo.InvariantCulture), FontSize = 10,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = Theme(isPublicHoliday || day.DayOfWeek == DayOfWeek.Sunday ? "CoralBrush" : day.Month != month.Month ? "MutedBrush" : "TextBrush"),
-                Opacity = day.Month == month.Month ? 1 : .4
+                Foreground = Theme(isPublicHoliday || day.DayOfWeek == DayOfWeek.Sunday ? "CoralBrush"
+                    : !state.IsCalendarCollapsed && day.Month != month.Month ? "MutedBrush" : "TextBrush"),
+                Opacity = state.IsCalendarCollapsed || day.Month == month.Month ? 1 : .4
             };
             content.Children.Add(number);
             var markers = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="clr-namespace:UsageRemaining.Widget.Services"
         Title="Codex Pulse" Icon="pack://application:,,,/CodexPulse;component/Assets/CodexPulse.ico"
-        Width="360" Height="604" MinWidth="360" MinHeight="80"
+        Width="360" Height="572" MinWidth="360" MinHeight="80"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent" ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen" FontFamily="Segoe UI, Malgun Gothic" UseLayoutRounding="True"
         AutomationProperties.Name="Codex 남은 사용량 위젯">
@@ -133,10 +133,10 @@
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="ExpandedPanel" Grid.Row="1" Height="540" VerticalAlignment="Top">
+            <Grid x:Name="ExpandedPanel" Grid.Row="1" Height="508" VerticalAlignment="Top">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="20" /><RowDefinition Height="90" /><RowDefinition Height="24" />
-                    <RowDefinition Height="16" /><RowDefinition Height="180" /><RowDefinition Height="110" />
+                    <RowDefinition Height="16" /><RowDefinition x:Name="CalendarRow" Height="180" /><RowDefinition Height="78" />
                     <RowDefinition Height="18" /><RowDefinition Height="54" /><RowDefinition Height="28" />
                 </Grid.RowDefinitions>
                 <Grid Margin="0,0,0,3">
@@ -170,18 +170,23 @@
                 </Grid>
 
                 <Grid Grid.Row="2">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="MonthText" Text="이번 달" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" AutomationProperties.Name="표시 중인 달" />
-                        <Button x:Name="GoogleConnectButton" Content="Google 연결" FontSize="9" Padding="4,1" Margin="5,0,0,0"
-                                Foreground="{StaticResource TextBrush}" Click="GoogleConnect_Click" ToolTip="Google 캘린더 연결 및 관리" AutomationProperties.Name="Google 캘린더 연결 및 관리" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button Width="23" Padding="0" Click="PreviousMonth_Click" ToolTip="이전 달" AutomationProperties.Name="이전 달">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <Button x:Name="CalendarCollapseButton" Width="22" Height="22" Padding="0" Click="ToggleCalendarCollapse_Click"
+                            ToolTip="주간 달력으로 접기" AutomationProperties.Name="주간 달력으로 접기">
+                        <Path x:Name="CalendarCollapseIcon" Data="M 0,5 L 5,0 10,5" Stroke="{StaticResource MutedBrush}" StrokeThickness="1.4"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    </Button>
+                    <TextBlock x:Name="MonthText" Grid.Column="1" Text="이번 달" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Margin="3,0,0,0" TextTrimming="CharacterEllipsis" AutomationProperties.Name="표시 중인 달력 기간" />
+                    <Button x:Name="GoogleConnectButton" Grid.Column="2" Content="Google 연결" FontSize="9" Padding="4,1" Margin="3,0,0,0"
+                            VerticalAlignment="Center" Foreground="{StaticResource TextBrush}" Click="GoogleConnect_Click"
+                            ToolTip="Google 캘린더 연결 및 관리" AutomationProperties.Name="Google 캘린더 연결 및 관리" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                        <Button x:Name="PreviousPeriodButton" Width="23" Padding="0" Click="PreviousMonth_Click" ToolTip="이전 달" AutomationProperties.Name="이전 달">
                             <Path Data="M 5,0 L 0,5 5,10" Stroke="{StaticResource MutedBrush}" StrokeThickness="1.4" />
                         </Button>
                         <Button Padding="5,0" Click="Today_Click" Content="오늘" FontSize="10" Foreground="{StaticResource MutedBrush}" AutomationProperties.Name="오늘로 이동" />
-                        <Button Width="23" Padding="0" Click="NextMonth_Click" ToolTip="다음 달" AutomationProperties.Name="다음 달">
+                        <Button x:Name="NextPeriodButton" Width="23" Padding="0" Click="NextMonth_Click" ToolTip="다음 달" AutomationProperties.Name="다음 달">
                             <Path Data="M 0,0 L 5,5 0,10" Stroke="{StaticResource MutedBrush}" StrokeThickness="1.4" />
                         </Button>
                     </StackPanel>
@@ -195,17 +200,19 @@
                     <TextBlock Text="금" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" FontSize="9" />
                     <TextBlock Text="토" Foreground="{StaticResource VioletBrush}" HorizontalAlignment="Center" FontSize="9" />
                 </UniformGrid>
-                <Grid Grid.Row="4">
+                <Grid Grid.Row="4" ClipToBounds="True">
                     <UniformGrid x:Name="DaysPanel" Columns="7" Rows="6" AutomationProperties.Name="사용량 초기화 달력" />
                     <Canvas x:Name="GoogleCalendarOverlay" ClipToBounds="True" SizeChanged="GoogleOverlay_SizeChanged" />
                 </Grid>
 
-                <Grid Grid.Row="5">
-                    <Grid.RowDefinitions><RowDefinition Height="18" /><RowDefinition Height="18" /><RowDefinition Height="74" /></Grid.RowDefinitions>
+                <Grid Grid.Row="5" Margin="0,0,0,8">
+                    <Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="48" /></Grid.RowDefinitions>
                     <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="22" /><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <TextBlock x:Name="SelectedDateText" Text="날짜를 선택하세요" FontWeight="SemiBold" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,4,0" />
-                        <StackPanel x:Name="CalendarLegend" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                        <Button x:Name="GoogleRefreshButton" Grid.Column="1" Width="22" Height="22" Content="↻" Padding="0" FontSize="14" Click="GoogleRefresh_Click" ToolTip="Google 일정 새로 고침" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Google 일정 새로 고침" />
+                        <Button x:Name="GoogleAddButton" Grid.Column="2" Width="22" Height="22" Content="＋" Padding="0" FontSize="14" Click="GoogleAdd_Click" ToolTip="선택한 날짜에 Google 일정 추가" AutomationProperties.Name="Google 일정 추가" />
+                        <StackPanel x:Name="CalendarLegend" Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center"
                                     ToolTip="흰색 테두리는 선택한 날짜이고, 날짜 안의 색상 점은 기록 종류입니다. 출처: OpenTheRank(제삼자 기록). 리셋: 출처 달력에 기록된 리셋 적용. 리셋권: 공개 지급 발표이며 내 계정 지급 확인이 아닙니다. 예고: 사전 발표가 게시된 시각이며 적용 시각이나 확정 일정이 아닙니다. 내 예정: 연결된 계정의 다음 초기화 시각입니다.">
                             <Ellipse Width="4" Height="4" Fill="{StaticResource MintBrush}" Margin="0,0,3,0" />
                             <TextBlock Text="리셋" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,0,6,0" />
@@ -217,13 +224,7 @@
                             <TextBlock Text="내 예정" FontSize="9" Foreground="{StaticResource MutedBrush}" />
                         </StackPanel>
                     </Grid>
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="22" /><ColumnDefinition Width="22" /></Grid.ColumnDefinitions>
-                        <TextBlock x:Name="GoogleSyncText" Text="Google 캘린더를 연결할 수 있습니다" FontSize="10" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <Button x:Name="GoogleRefreshButton" Grid.Column="1" Content="↻" Padding="0" FontSize="14" Click="GoogleRefresh_Click" ToolTip="Google 일정 새로 고침" AutomationProperties.Name="Google 일정 새로 고침" />
-                        <Button x:Name="GoogleAddButton" Grid.Column="2" Content="＋" Padding="0" FontSize="14" Click="GoogleAdd_Click" ToolTip="선택한 날짜에 Google 일정 추가" AutomationProperties.Name="Google 일정 추가" />
-                    </Grid>
-                    <ScrollViewer x:Name="CalendarDetailScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PanningMode="VerticalOnly">
+                    <ScrollViewer x:Name="CalendarDetailScroll" Grid.Row="1" Height="48" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PanningMode="VerticalOnly">
                         <StackPanel>
                             <TextBlock x:Name="DetailText" Visibility="Collapsed" Text="공개 이력과 내 초기화 일정을 함께 확인하세요." Foreground="{StaticResource MutedBrush}" FontSize="9" LineHeight="11" TextWrapping="Wrap" />
                             <StackPanel x:Name="CalendarEventList" />

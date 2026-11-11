@@ -42,6 +42,10 @@ jobs:
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --update-ui
       - name: Run startup preference and header checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --startup-ui
+      - name: Run weekly calendar UI checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --calendar-week-ui
+      - name: Run shared agenda UI checks with fake services
+        run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --agenda-ui
       - name: Run Google calendar UI checks with fake services
         run: ./tests/UsageRemaining.Checks/bin/Release/net10.0-windows/UsageRemaining.Checks.exe --google-ui
       - name: Run Google OAuth checks with fake services

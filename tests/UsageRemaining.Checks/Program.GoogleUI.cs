@@ -12,7 +12,7 @@ namespace UsageRemaining.Checks;
 
 internal static partial class Program
 {
-    private static int GoogleUiChecks()
+    private static int GoogleUiChecks(bool agendaOnly = false)
     {
         var folder = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "google-ui", Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("USAGEREMAINING_DATA_DIR", folder);
@@ -36,7 +36,7 @@ internal static partial class Program
                 DetachStartupRuntimeLoading(window);
                 window.Show();
                 window.UpdateLayout();
-                Check(window.Width == 360 && window.Height == 604, "Google integration retains 360 DIP width and provides expanded calendar detail height");
+                Check(window.Width == 360 && window.Height == 572, "Google integration retains 360 DIP width and provides expanded calendar detail height");
                 Check(((FrameworkElement)window.FindName("GoogleCalendarOverlay")).ActualWidth > 0,
                     "Google calendar overlay is measured with the month grid");
                 SetWindowField(window, "selectedDate", new DateTime(2026, 11, 9));
@@ -47,14 +47,21 @@ internal static partial class Program
                 var list = (StackPanel)window.FindName("CalendarEventList");
                 Check(list.Children.Count >= 4, "Google selected-day details retain every same-day event");
                 var scroll = (ScrollViewer)window.FindName("CalendarDetailScroll");
-                Check(scroll.ExtentHeight > scroll.ViewportHeight && scroll.ActualHeight >= 73 && scroll.ActualHeight <= 75,
-                    "Google details show three rows and scroll for additional entries");
+                Check(scroll.ExtentHeight > scroll.ViewportHeight && Math.Abs(scroll.ActualHeight - 48) < .1,
+                    "Google details show two rows and scroll for additional entries");
                 var canvas = (Canvas)window.FindName("GoogleCalendarOverlay");
                 Check(canvas.Children.Count >= 2 && canvas.Children.OfType<FrameworkElement>().All(child => child.ActualWidth > 0),
                     "Google multiday events render visible overlay spans across week boundaries");
                 Capture(window, "google-calendar-fixture");
                 CheckGoogleCalendarGeometry(window);
                 CheckGoogleCreditFontParity(window);
+                if (agendaOnly)
+                {
+                    CheckCompactAgendaLayout(window, google);
+                    await CheckAgendaSyncFeedback(window, google);
+                    Console.WriteLine($"All {passed} agenda checks passed. Fake accounts and isolated settings only.");
+                    return;
+                }
                 CheckGoogleHolidayPresentation(window, google);
                 GoogleMainWindowCrudChecks(window, google);
                 await GoogleDirectDeleteChecks(window, google);
@@ -317,7 +324,13 @@ internal static partial class Program
             Changed?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         }
-        public Task RefreshAsync(DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public List<(DateTimeOffset Start, DateTimeOffset End)> RefreshRequests { get; } = [];
+        public Func<DateTimeOffset, DateTimeOffset, CancellationToken, Task>? RefreshBehavior { get; set; }
+        public Task RefreshAsync(DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+        {
+            RefreshRequests.Add((start, end));
+            return RefreshBehavior?.Invoke(start, end, cancellationToken) ?? Task.CompletedTask;
+        }
         public Task<GoogleCalendarEvent> SaveAsync(GoogleCalendarEvent value, CancellationToken cancellationToken = default)
         {
             Saves++;

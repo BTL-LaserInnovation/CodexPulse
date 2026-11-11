@@ -61,18 +61,38 @@ public partial class MainWindow
         GoogleAddButton.IsEnabled = !updateApplying && !googleConnecting && !googleDeleting;
         GoogleRefreshButton.IsEnabled = !googleRefreshing && !googleConnecting && !googleDeleting && !updateApplying;
         GoogleAddButton.ToolTip = !connection.Connected ? "Google 계정을 연결하고 일정 추가" : "선택한 날짜에 Google 일정 추가";
-        GoogleRefreshButton.ToolTip = !connection.Connected ? "Google 계정을 연결하고 일정 새로 고침" : "Google 일정 새로 고침";
-        GoogleSyncText.Text = googleDeleting ? "Google 일정 삭제 처리 중…"
+        var status = googleDeleting ? "Google 일정 삭제 처리 중…"
             : googleRefreshing ? "Google 일정 동기화 중…"
             : googleError is not null ? "Google · " + googleError
             : connection.Warning is not null ? "Google 동기화 확인 필요"
             : googleConnecting ? "Google 계정 연결 중…"
             : connection.Connected ? connection.LastSyncedAt is { } at ? $"Google · {LocalTime.Convert(at):HH:mm} 동기화" : "Google · 연결됨"
             : "Google 캘린더를 연결할 수 있습니다";
-        GoogleSyncText.ToolTip = googleError ?? connection.Warning ?? (connection.Connected
+        SetGoogleRefreshStatus(status);
+    }
+
+    private void SetGoogleRefreshStatus(string status, bool attention = false)
+    {
+        var connection = googleCalendar.State;
+        var lines = new List<string>
+        {
+            connection.Connected ? "Google 일정 새로 고침" : "Google 계정을 연결하고 일정 새로 고침",
+            status
+        };
+        if (googleError is not null && status != "Google · " + googleError) lines.Add(googleError);
+        if (connection.Warning is not null) lines.Add(connection.Warning);
+        if (connection.LastSyncedAt is { } at)
+        {
+            var synced = $"Google · {LocalTime.Convert(at):HH:mm} 동기화";
+            if (status != synced) lines.Add(synced);
+        }
+        lines.Add(connection.Connected
             ? $"{connection.AccountEmail}\n선택한 캘린더 {connection.SelectedCalendarIds.Count}개 · 60초마다 변경 확인\nPC 시간대: {TimeZoneInfo.Local.DisplayName}"
             : "Google 연결을 누르면 브라우저에서 계정을 선택할 수 있습니다.");
-        GoogleSyncText.Foreground = Theme(googleError is not null || connection.Warning is not null ? "CoralBrush" : "MutedBrush");
+        var tooltip = string.Join("\n", lines);
+        GoogleRefreshButton.ToolTip = tooltip;
+        AutomationProperties.SetHelpText(GoogleRefreshButton, tooltip);
+        GoogleRefreshButton.Foreground = Theme(attention || googleError is not null || connection.Warning is not null ? "CoralBrush" : "MutedBrush");
     }
 
     private async Task RefreshGoogleAsync(bool force = false)
@@ -86,11 +106,12 @@ public partial class MainWindow
         RenderGoogleConnection();
         try
         {
-            var first = DateOnly.FromDateTime(month.AddDays(-(int)month.DayOfWeek));
+            var range = VisibleCalendarRange;
+            var first = DateOnly.FromDateTime(range.Start);
             // Include a margin so all-day events in a calendar's different time zone
-            // cannot disappear at either edge of the computer's visible month.
+            // cannot disappear at either edge of the computer's visible range.
             await googleCalendar.RefreshAsync(CalendarEventPresentation.LocalMidnight(first.AddDays(-2)),
-                CalendarEventPresentation.LocalMidnight(first.AddDays(44)), lifetime.Token);
+                CalendarEventPresentation.LocalMidnight(DateOnly.FromDateTime(range.EndExclusive).AddDays(2)), lifetime.Token);
             googleError = null;
         }
         catch (OperationCanceledException) when (closing) { }
@@ -150,11 +171,11 @@ public partial class MainWindow
             await googleCalendar.InitializeAsync(lifetime.Token);
             if (!googleCalendar.State.IsConfigured)
             {
-                GoogleSyncText.Text = "Google 연결 준비가 아직 완료되지 않았습니다";
+                SetGoogleRefreshStatus("Google 연결 준비가 아직 완료되지 않았습니다", attention: true);
                 ShowGoogleAccountDialog();
                 return googleCalendar.State.Connected;
             }
-            GoogleSyncText.Text = "브라우저에서 Google 로그인을 완료하세요";
+            SetGoogleRefreshStatus("브라우저에서 Google 로그인을 완료하세요");
             await googleCalendar.ConnectAsync(OpenGoogleBrowser, lifetime.Token);
             if (closing) return false;
             await RefreshGoogleAsync(force: true);
@@ -193,7 +214,7 @@ public partial class MainWindow
         if (!await EnsureGoogleConnectedAsync()) return;
         if (!googleCalendar.State.Calendars.Any(calendar => calendar.CanWrite))
         {
-            GoogleSyncText.Text = "일정을 추가할 수 있는 캘린더가 없습니다";
+            SetGoogleRefreshStatus("일정을 추가할 수 있는 캘린더가 없습니다", attention: true);
             ShowGoogleAccountDialog();
             return;
         }
@@ -265,7 +286,7 @@ public partial class MainWindow
 
     private FrameworkElement CalendarListRow(string symbol, Brush brush, string time, string title, string tooltip, GoogleCalendarEvent? value)
     {
-        var grid = new Grid { Height = 20 };
+        var grid = new Grid { Height = 22 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(82) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -276,7 +297,7 @@ public partial class MainWindow
         var text = new TextBlock { Text = title, FontSize = ListFontSize, FontWeight = FontWeights.Normal, Foreground = Theme("TextBrush"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         Grid.SetColumn(when, 1); Grid.SetColumn(text, 2);
         grid.Children.Add(mark); grid.Children.Add(when); grid.Children.Add(text);
-        if (value is null) { grid.Height = 22; grid.Margin = new Thickness(0, 0, 0, 2); grid.ToolTip = tooltip; return grid; }
+        if (value is null) { grid.Margin = new Thickness(0, 0, 0, 2); grid.ToolTip = tooltip; return grid; }
         var row = new Grid { Height = 22, Margin = new Thickness(0, 0, 0, 2), Tag = value };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
@@ -318,14 +339,15 @@ public partial class MainWindow
         var overlay = GoogleCalendarOverlay;
         overlay.Children.Clear();
         if (overlay.ActualWidth <= 0 || overlay.ActualHeight <= 0) return;
-        var first = DateOnly.FromDateTime(month.AddDays(-(int)month.DayOfWeek));
+        var displayRange = VisibleCalendarRange;
+        var first = DateOnly.FromDateTime(displayRange.Start);
         var width = overlay.ActualWidth / 7;
-        var height = overlay.ActualHeight / 6;
+        var height = overlay.ActualHeight / displayRange.RowCount;
         var all = googleCalendar.State.Events.Where(value => !value.Cancelled && !GoogleHolidayCalendar.IsHolidayCalendar(value.CalendarId))
             .Select(value => (Value: value, Dates: CalendarEventPresentation.Dates(value)))
             .Where(item => item.Dates is not null).OrderBy(item => item.Dates!.Value.Start)
             .ThenByDescending(item => item.Dates!.Value.EndExclusive.DayNumber - item.Dates!.Value.Start.DayNumber).ToArray();
-        for (var week = 0; week < 6; week++)
+        for (var week = 0; week < displayRange.RowCount; week++)
         {
             var weekStart = first.AddDays(week * 7);
             var occupied = new bool[7];

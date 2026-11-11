@@ -98,9 +98,10 @@ internal static partial class Program
             "Google single-day icon stays inside the upper right of its date without covering the date number");
         var rows = ((StackPanel)window.FindName("CalendarEventList")).Children.OfType<FrameworkElement>().ToArray();
         var scroll = (ScrollViewer)window.FindName("CalendarDetailScroll");
-        Check(rows.Take(3).All(row => Math.Abs(row.ActualHeight - 22) < .1 && Math.Abs(row.Margin.Bottom - 2) < .1) &&
-            VisualBounds(rows[2], scroll).Bottom <= scroll.ViewportHeight + .1,
-            "selected-day viewport shows three complete 22 DIP rows with two DIP gaps");
+        Check(rows.Take(2).All(row => Math.Abs(row.ActualHeight - 22) < .1 && Math.Abs(row.Margin.Bottom - 2) < .1) &&
+            VisualBounds(rows[1], scroll).Bottom <= scroll.ViewportHeight + .1 &&
+            VisualBounds(rows[2], scroll).Top >= scroll.ViewportHeight - .1,
+            "selected-day viewport shows two complete rows and keeps the third behind internal scrolling");
     }
 
     private static void CheckGoogleCreditFontParity(MainWindow window)
@@ -114,7 +115,7 @@ internal static partial class Program
         Check(creditRows.Length == 2 && creditText.Length == 6 && font == 10 &&
             creditText.All(text => text.FontSize == font) && eventText.Length >= 8 && eventText.All(text => text.FontSize == font),
             "actual credit name expiry and remaining columns match calendar title and time fonts");
-        Check(new[] { "CreditsHint", "GoogleSyncText", "SelectedDateText" }
+        Check(new[] { "CreditsHint", "SelectedDateText" }
             .Select(name => (TextBlock)window.FindName(name)).All(text => text.FontSize == font),
             "calendar and credit list hints share the same readable font size");
         var originalDate = WindowField<DateTime>(window, "selectedDate");

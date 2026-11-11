@@ -87,7 +87,7 @@ internal static partial class Program
         await WaitUntilAsync(() => !WindowField<bool>(window, "googleDeleting"), "failed direct delete restores controls");
         Check(google.Deletes == before + 1 && google.State.Events.Contains(value) && GoogleListRow(window, value.Summary).IsVisible &&
             WindowField<string>(window, "selectedGoogleEvent") == CalendarEventPresentation.Key(value) &&
-            ((TextBlock)window.FindName("GoogleSyncText")).Text.Contains("Fixture direct delete failure"),
+            ((Button)window.FindName("GoogleRefreshButton")).ToolTip.ToString()!.Contains("Fixture direct delete failure"),
             "direct delete failure keeps visible row selection and a visible actionable error");
         google.DeleteBehavior = null;
 
